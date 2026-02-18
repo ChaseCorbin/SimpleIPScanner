@@ -6,36 +6,55 @@ A modern, high-performance WPF application for network discovery and DNS perform
 ![Platform](https://img.shields.io/badge/Platform-Windows-0078d4)
 ![Framework](https://img.shields.io/badge/Framework-.NET%208-512bd4)
 
-## Key Features
+---
+
+## 📥 Download & Quick Start
+
+### 1. Download the Executable
+Go to the [**Releases**](https://github.com/ChaseCorbin/SimpleIPScanner/releases) page and download the latest `SimpleIPScanner.exe`. 
+
+### 2. Verify Security (Optional but Recommended)
+To ensure the file hasn't been tampered with, you can verify its SHA-256 hash. Open PowerShell in your download folder and run:
+```powershell
+Get-FileHash .\SimpleIPScanner.exe
+```
+Compare the resulting hash with the one provided in the `SHA256SUM.txt` file or on the Release page.
+
+### 3. Run the App
+- No installation is required. This is a **portable** app.
+- Simply double-click `SimpleIPScanner.exe` to start.
+- *Note: On first run, Windows SmartScreen may show a warning because the app is not signed with a paid developer certificate. Click "More Info" -> "Run anyway".*
+
+---
+
+## ✨ Key Features
 
 ### ⚡ Network Scanner
-- **Fast Discovery**: Scans entire subnets using optimized asynchronous pinging.
-- **Improved OS Detection**: Heuristically detects Windows, Apple, and Linux devices.
-- **Enhanced Icons**: Displays modern icons including a custom **Bow Tie icon** for Linux and standard high-quality logos for Windows and Apple.
-- **Vendor Lookup**: Automatically identifies device manufacturers (Dell, Apple, HP, etc.) using an IEEE OUI database.
-- **Port Scanning**: Automatically scans for common open ports (HTTP, HTTPS, SSH, SMB, etc.) and displays them directly in the grid.
-- **Modern UI**: Dark-themed dashboard with green accents and real-time progress bars.
+- **Fast Discovery**: Optimized asynchronous pinging for entire subnets.
+- **OS Fingerprinting**: Detects Windows, Apple, and Linux (using the custom **Bow Tie icon**).
+- **Vendor Detection**: Instant identification of device manufacturers (Apple, Dell, Sony, etc.).
+- **Automatic Port Scanning**: Identifies common open ports (Web, SSH, SMB) automatically.
 
 ### 🚀 DNS Benchmark
-- **Latency Testing**: Real-time monitoring of response times from major DNS providers.
-- **Cached vs Live**: Compares standard OS-level (cached) queries against manual UDP (uncached) queries to bypass recursive caches.
-- **Multi-Threaded**: Runs tests concurrently across Google (8.8.8.8), Cloudflare (1.1.1.1), OpenDNS, Quad9, and your local default.
-- **Average Tracking**: Displays average, min, and max latencies over 15-30 second test durations.
+- **Live Latency Testing**: Compare response times of major DNS providers (Google, Cloudflare, etc.).
+- **Uncached Queries**: Uses direct UDP queries with unique subdomains to bypass recursive caches and see "true" server response time.
+- **Real-time Stats**: Track Min, Max, and Average latency over a set duration.
 
-## Screenshots
-*(Add screenshots here)*
+---
 
-## How to Build
-1. Open the solution in **Visual Studio 2022**.
-2. Restore NuGet packages.
-3. Build and run in **Release** mode for best performance.
+## 🛠️ For Developers
 
-## Technologies Used
-- **C# / WPF** (Windows Presentation Foundation)
-- **.NET 8.0**
-- **Asynchronous Programming** (Task Parallel Library)
-- **Raw Socket/UDP** (for Live DNS Benchmarking)
-- **XAML Styling** (Custom templates and animations)
+### Building from Source
+1. Clone the repository: `git clone https://github.com/ChaseCorbin/SimpleIPScanner.git`
+2. Open the solution in **Visual Studio 2022**.
+3. Ensure **.NET 8 SDK** is installed.
+4. Build in **Release** mode.
+
+### Technology Stack
+- **Language**: C# 12
+- **UI Framework**: WPF (Windows Presentation Foundation)
+- **Runtime**: .NET 8
+- **Networking**: `System.Net.Sockets`, `System.Net.NetworkInformation`
 
 ---
 Developed by **Chase Corbin**
