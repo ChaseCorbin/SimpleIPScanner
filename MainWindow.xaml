@@ -1,0 +1,310 @@
+<Window x:Class="SimpleIPScanner.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="IP Scanner &amp; DNS Benchmark — By Chase Corbin"
+        Width="1100" Height="750"
+        MinWidth="900" MinHeight="600"
+        WindowStartupLocation="CenterScreen"
+        Icon="pack://application:,,,/Assets/WDC.png"
+        Background="{StaticResource PrimaryDarkBrush}">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- HEADER -->
+        <Border Grid.Row="0" Padding="24,18,24,12">
+            <Border.Background>
+                <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                    <GradientStop Color="#0D1117" Offset="0"/>
+                    <GradientStop Color="#1C2333" Offset="1"/>
+                </LinearGradientBrush>
+            </Border.Background>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Image Source="pack://application:,,,/Assets/WDC.png" Height="40" VerticalAlignment="Center" Margin="0,0,12,0" RenderOptions.BitmapScalingMode="HighQuality"/>
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="IP Scanner" FontSize="22" FontWeight="Bold"
+                                   Foreground="{StaticResource TextPrimaryBrush}" FontFamily="Segoe UI"/>
+                        <TextBlock Text="By Chase Corbin" FontSize="11"
+                                   Foreground="{StaticResource TextSecondaryBrush}" FontFamily="Segoe UI"
+                                   Margin="0,-2,0,0"/>
+                    </StackPanel>
+                </StackPanel>
+
+                <Border Grid.Column="2" Background="{StaticResource CardDarkBrush}" CornerRadius="10" Padding="16,8"
+                        VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal">
+                        <Ellipse Width="10" Height="10" Fill="{StaticResource OnlineGreenBrush}"
+                                 VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <TextBlock x:Name="OnlineCountText" Text="0 devices online" FontSize="13"
+                                   Foreground="{StaticResource TextPrimaryBrush}" FontFamily="Segoe UI"
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Border>
+
+        <!-- MAIN CONTENT TAB CONTROL -->
+        <TabControl Grid.Row="1" Margin="0,10,0,0">
+            <!-- TAB 1: NETWORK SCANNER -->
+            <TabItem Header="Network Scanner">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- INPUT CONTROLS -->
+                    <Border Grid.Row="0" Padding="24,12,24,16">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <TextBlock Grid.Column="0" Text="Subnet:" FontSize="14" FontFamily="Segoe UI"
+                                       Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center"
+                                       Margin="0,0,12,0"/>
+
+                            <TextBox x:Name="CidrInput" Grid.Column="1" Style="{StaticResource ModernTextBox}"
+                                     Text="192.168.1.0/24" VerticalAlignment="Center"
+                                     KeyDown="CidrInput_KeyDown"/>
+
+                            <CheckBox x:Name="ShowAllToggle" Grid.Column="2" Content="Show Unreachable" 
+                                     Style="{StaticResource ModernCheckBox}" 
+                                     Margin="16,0,0,0" VerticalAlignment="Center"
+                                     Checked="FilterToggle_Changed" Unchecked="FilterToggle_Changed"/>
+
+                            <Button x:Name="ScanButton" Grid.Column="3" Content="⚡ Scan"
+                                    Style="{StaticResource ScanButton}" Margin="12,0,0,0"
+                                    Click="ScanButton_Click" VerticalAlignment="Center"/>
+
+                            <Button x:Name="StopButton" Grid.Column="4" Content="■ Stop"
+                                    Style="{StaticResource StopButton}" Margin="8,0,0,0"
+                                    Click="StopButton_Click" VerticalAlignment="Center"
+                                    Visibility="Collapsed"/>
+                        </Grid>
+                    </Border>
+
+                    <!-- PROGRESS -->
+                    <Border Grid.Row="1" Padding="24,0,24,12">
+                        <StackPanel>
+                            <Grid Margin="0,0,0,6">
+                                <TextBlock x:Name="ProgressText" Text="Ready to scan" FontSize="12"
+                                           Foreground="{StaticResource TextSecondaryBrush}" FontFamily="Segoe UI"
+                                           HorizontalAlignment="Left"/>
+                                <TextBlock x:Name="ProgressPercent" Text="" FontSize="12"
+                                           Foreground="{StaticResource AccentCyanBrush}" FontFamily="Segoe UI"
+                                           HorizontalAlignment="Right" FontWeight="SemiBold"/>
+                            </Grid>
+                            <ProgressBar x:Name="ScanProgress" Style="{StaticResource ModernProgressBar}"
+                                         Minimum="0" Maximum="100" Value="0"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- RESULTS DATAGRID -->
+                    <Grid Grid.Row="2" Margin="24,0,24,24">
+                        <Border x:Name="GridMask" Background="White" CornerRadius="8"/>
+                        <Border CornerRadius="8" Background="{StaticResource PrimaryDarkBrush}" 
+                                BorderBrush="{StaticResource BorderDarkBrush}" BorderThickness="1">
+                            <Border.OpacityMask>
+                                <VisualBrush Visual="{Binding ElementName=GridMask}"/>
+                            </Border.OpacityMask>
+                            <DataGrid x:Name="ResultsGrid" AutoGenerateColumns="False" IsReadOnly="True"
+                                      CanUserSortColumns="True" CanUserResizeColumns="True"
+                                      VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
+                                      SelectionUnit="FullRow"
+                                      Background="Transparent" BorderThickness="0"
+                                      GridLinesVisibility="Horizontal"
+                                      HorizontalGridLinesBrush="{StaticResource BorderDarkBrush}">
+                                <DataGrid.Columns>
+                                <DataGridTemplateColumn Header="" Width="50">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <Button Content="🔄" FontSize="14" Cursor="Hand" ToolTip="Re-scan this IP"
+                                                    Click="RescanButton_Click" Tag="{Binding}" Padding="6,3">
+                                                <Button.Style>
+                                                    <Style TargetType="Button">
+                                                        <Setter Property="Background" Value="Transparent"/>
+                                                        <Setter Property="BorderThickness" Value="0"/>
+                                                        <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
+                                                        <Setter Property="Template">
+                                                            <Setter.Value>
+                                                                <ControlTemplate TargetType="Button">
+                                                                    <Border x:Name="bg" Background="Transparent" CornerRadius="4">
+                                                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                                    </Border>
+                                                                    <ControlTemplate.Triggers>
+                                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                                            <Setter TargetName="bg" Property="Background" Value="{StaticResource CardDarkBrush}"/>
+                                                                        </Trigger>
+                                                                    </ControlTemplate.Triggers>
+                                                                </ControlTemplate>
+                                                            </Setter.Value>
+                                                        </Setter>
+                                                    </Style>
+                                                </Button.Style>
+                                            </Button>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+
+                                <DataGridTemplateColumn Header="Status" Width="80">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                <Ellipse Width="8" Height="8" Margin="0,0,8,0">
+                                                    <Ellipse.Style>
+                                                        <Style TargetType="Ellipse">
+                                                            <Setter Property="Fill" Value="{StaticResource OfflineGrayBrush}"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsOnline}" Value="True">
+                                                                    <Setter Property="Fill" Value="{StaticResource OnlineGreenBrush}"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Ellipse.Style>
+                                                </Ellipse>
+                                                <TextBlock Text="{Binding Status}">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="Foreground" Value="{StaticResource OfflineGrayBrush}"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsOnline}" Value="True">
+                                                                    <Setter Property="Foreground" Value="{StaticResource OnlineGreenBrush}"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+
+                                <DataGridTemplateColumn Header="OS" Width="50">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <Path Data="{Binding OSIcon}" Fill="{StaticResource TextSecondaryBrush}" Width="16" Height="16" Stretch="Uniform" HorizontalAlignment="Center" ToolTip="{Binding OSType}"/>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+
+                                <DataGridTextColumn Header="IP Address" Binding="{Binding IP}" Width="130" SortMemberPath="SortKey"/>
+                                <DataGridTextColumn Header="Hostname" Binding="{Binding Hostname}" Width="*"/>
+                                <DataGridTextColumn Header="MAC Address" Binding="{Binding MAC}" Width="150"/>
+                                <DataGridTextColumn Header="Vendor" Binding="{Binding Vendor}" Width="120" Foreground="{StaticResource AccentCyanBrush}"/>
+                                <DataGridTextColumn Header="Open Ports" Binding="{Binding OpenPorts}" Width="200" Foreground="{StaticResource AccentCyanBrush}"/>
+                                <DataGridTextColumn Header="Ping" Binding="{Binding PingDisplay}" Width="70"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </Border>
+                </Grid>
+            </Grid>
+        </TabItem>
+
+            <!-- TAB 2: DNS BENCHMARK -->
+            <TabItem Header="DNS Benchmark">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <Border Grid.Row="0" Padding="24,12,24,16">
+                        <StackPanel>
+                            <TextBlock Text="DNS Server Latency Test" FontSize="18" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,4"/>
+                            <TextBlock Text="This tests the response time of various DNS servers. 'Uncached' queries bypass local and resolver caches using unique subdomains." 
+                                       FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,0,0,16"/>
+                            
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                
+                                <TextBlock Grid.Column="0" Text="Test Duration:" VerticalAlignment="Center" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,12,0"/>
+                                <ComboBox x:Name="DnsTestDuration" Grid.Column="1" Width="120" Style="{StaticResource {x:Static ToolBar.ComboBoxStyleKey}}" BorderBrush="{StaticResource BorderDarkBrush}" Background="{StaticResource SecondaryDarkBrush}" Foreground="{StaticResource TextPrimaryBrush}" SelectedIndex="1">
+                                    <ComboBoxItem Content="5 Seconds" Tag="5"/>
+                                    <ComboBoxItem Content="15 Seconds" Tag="15"/>
+                                    <ComboBoxItem Content="30 Seconds" Tag="30"/>
+                                </ComboBox>
+                                
+                                <Button x:Name="StartDnsBenchmarkBtn" Grid.Column="3" Content="🚀 Start Benchmark" Style="{StaticResource ScanButton}" Click="StartDnsBenchmark_Click"/>
+                                <Button x:Name="StopDnsBenchmarkBtn" Grid.Column="3" Content="■ Stop" Style="{StaticResource StopButton}" Click="StopDnsBenchmark_Click" Visibility="Collapsed"/>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Grid.Row="1" Padding="24,0,24,12">
+                        <ProgressBar x:Name="DnsBenchmarkProgress" Style="{StaticResource ModernProgressBar}"/>
+                    </Border>
+
+                    <!-- DNS RESULTS DATAGRID -->
+                    <Grid Grid.Row="2" Margin="24,0,24,24">
+                        <Border x:Name="DnsGridMask" Background="White" CornerRadius="8"/>
+                        <Border CornerRadius="8" Background="{StaticResource PrimaryDarkBrush}" 
+                                BorderBrush="{StaticResource BorderDarkBrush}" BorderThickness="1">
+                            <Border.OpacityMask>
+                                <VisualBrush Visual="{Binding ElementName=DnsGridMask}"/>
+                            </Border.OpacityMask>
+                            <DataGrid x:Name="DnsResultsGrid" AutoGenerateColumns="False" IsReadOnly="True" 
+                                      Background="Transparent" BorderThickness="0">
+                                <DataGrid.Columns>
+                                <DataGridTextColumn Header="DNS Provider" Binding="{Binding ServerName}" Width="*"/>
+                                <DataGridTextColumn Header="IP Address" Binding="{Binding ServerIp}" Width="120"/>
+                                <DataGridTemplateColumn Header="Standard (Cached)" Width="150">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding AverageLatencyCached, StringFormat={}{0:F2} ms}" FontWeight="Bold" Foreground="{StaticResource OnlineGreenBrush}"/>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTemplateColumn Header="Live (Uncached)" Width="150">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding AverageLatencyUncached, StringFormat={}{0:F2} ms}" FontWeight="Bold" Foreground="{StaticResource AccentCyanBrush}"/>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTextColumn Header="Min" Binding="{Binding MinLatencyCached, StringFormat={}{0:F1} ms}" Width="80"/>
+                                <DataGridTextColumn Header="Max" Binding="{Binding MaxLatencyCached, StringFormat={}{0:F1} ms}" Width="80"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                        </Border>
+                    </Grid>
+                </Grid>
+            </TabItem>
+        </TabControl>
+
+        <!-- STATUS BAR -->
+        <Border Grid.Row="2" Padding="24,10" Background="{StaticResource SecondaryDarkBrush}"
+                BorderBrush="{StaticResource BorderDarkBrush}" BorderThickness="0,1,0,0">
+            <Grid>
+                <TextBlock x:Name="StatusText" Text="Ready"
+                           FontSize="12" Foreground="{StaticResource TextSecondaryBrush}"
+                           FontFamily="Segoe UI" HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                <TextBlock x:Name="ElapsedText" Text=""
+                           FontSize="12" Foreground="{StaticResource TextSecondaryBrush}"
+                           FontFamily="Segoe UI" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>
