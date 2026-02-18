@@ -14,7 +14,10 @@ A modern, high-performance WPF application for network discovery and DNS perform
 Go to the [**Releases**](https://github.com/ChaseCorbin/SimpleIPScanner/releases) page and download the latest `SimpleIPScanner.exe`. 
 
 ### 2. Verify Security (Optional but Recommended)
-To ensure the file hasn't been tampered with, you can verify its SHA-256 hash. Open PowerShell in your download folder and run:
+To ensure the file hasn't been tampered with, you can verify its SHA-256 hash. The current build hash is:
+**`944061E87A0DF6AAD9009292E45973FB1BD57A0648FF36F4F7062C4302501246`**
+
+Open PowerShell in your download folder and run:
 ```powershell
 Get-FileHash .\SimpleIPScanner.exe
 ```
