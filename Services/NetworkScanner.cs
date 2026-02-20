@@ -223,7 +223,7 @@ namespace SimpleIPScanner.Services
                     }
                 }
             }
-            catch (OperationCanceledException) { throw; }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
             catch { }
 
             return "N/A";
