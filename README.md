@@ -1,3 +1,7 @@
+<img width="1913" height="1027" alt="image" src="https://github.com/user-attachments/assets/d96c2b5e-f0db-4192-a6b3-78fd3cf870ee" />
+<img width="1915" height="629" alt="image" src="https://github.com/user-attachments/assets/ae6ceb76-0d73-45f5-9d7f-1cd6fb8f13cc" />
+<img width="1918" height="1003" alt="image" src="https://github.com/user-attachments/assets/4cbc116a-94fe-4f69-9370-bc8fedceda8f" />
+
 # Simple IP Scanner & DNS Benchmark
 
 A modern, high-performance WPF application for network discovery, DNS performance testing, and visual traceroute monitoring.
