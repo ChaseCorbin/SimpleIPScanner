@@ -5,7 +5,6 @@
         Width="1100" Height="750"
         MinWidth="900" MinHeight="600"
         WindowStartupLocation="CenterScreen"
-        Icon="pack://application:,,,/Assets/WDC.png"
         Background="{StaticResource PrimaryDarkBrush}">
 
     <Grid>
@@ -31,7 +30,56 @@
                 </Grid.ColumnDefinitions>
 
                 <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                    <Image Source="pack://application:,,,/Assets/WDC.png" Height="40" VerticalAlignment="Center" Margin="0,0,12,0" RenderOptions.BitmapScalingMode="HighQuality"/>
+                    <!-- Switch stack logo (vector, no external image) -->
+                    <Viewbox Height="40" VerticalAlignment="Center" Margin="0,0,14,0" Stretch="Uniform">
+                        <Canvas Width="54" Height="36">
+                            <!-- Stacking bracket -->
+                            <Rectangle Canvas.Left="0" Canvas.Top="3" Width="2" Height="30"
+                                       Fill="{StaticResource AccentCyanBrush}" RadiusX="1" RadiusY="1"/>
+
+                            <!-- Switch 1 — top, inactive -->
+                            <Rectangle Canvas.Left="4" Canvas.Top="0" Width="48" Height="10"
+                                       Fill="{StaticResource CardDarkBrush}" RadiusX="2" RadiusY="2"/>
+                            <Rectangle Canvas.Left="4" Canvas.Top="0" Width="48" Height="10"
+                                       Fill="Transparent" Stroke="{StaticResource BorderDarkBrush}"
+                                       StrokeThickness="0.8" RadiusX="2" RadiusY="2"/>
+                            <Rectangle Canvas.Left="9"  Canvas.Top="3" Width="4" Height="4" Fill="{StaticResource BorderDarkBrush}" RadiusX="0.5" RadiusY="0.5"/>
+                            <Rectangle Canvas.Left="15" Canvas.Top="3" Width="4" Height="4" Fill="{StaticResource BorderDarkBrush}" RadiusX="0.5" RadiusY="0.5"/>
+                            <Rectangle Canvas.Left="21" Canvas.Top="3" Width="4" Height="4" Fill="{StaticResource BorderDarkBrush}" RadiusX="0.5" RadiusY="0.5"/>
+                            <Rectangle Canvas.Left="27" Canvas.Top="3" Width="4" Height="4" Fill="{StaticResource BorderDarkBrush}" RadiusX="0.5" RadiusY="0.5"/>
+                            <Rectangle Canvas.Left="33" Canvas.Top="3" Width="4" Height="4" Fill="{StaticResource BorderDarkBrush}" RadiusX="0.5" RadiusY="0.5"/>
+                            <Rectangle Canvas.Left="39" Canvas.Top="3" Width="4" Height="4" Fill="{StaticResource BorderDarkBrush}" RadiusX="0.5" RadiusY="0.5"/>
+                            <Ellipse   Canvas.Left="46" Canvas.Top="3" Width="4" Height="4" Fill="{StaticResource OfflineGrayBrush}"/>
+
+                            <!-- Switch 2 — middle, partial -->
+                            <Rectangle Canvas.Left="4" Canvas.Top="13" Width="48" Height="10"
+                                       Fill="{StaticResource CardDarkBrush}" RadiusX="2" RadiusY="2"/>
+                            <Rectangle Canvas.Left="4" Canvas.Top="13" Width="48" Height="10"
+                                       Fill="Transparent" Stroke="{StaticResource BorderDarkBrush}"
+                                       StrokeThickness="0.8" RadiusX="2" RadiusY="2"/>
+                            <Rectangle Canvas.Left="9"  Canvas.Top="16" Width="4" Height="4" Fill="{StaticResource AccentCyanBrush}" RadiusX="0.5" RadiusY="0.5"/>
+                            <Rectangle Canvas.Left="15" Canvas.Top="16" Width="4" Height="4" Fill="{StaticResource AccentCyanBrush}" RadiusX="0.5" RadiusY="0.5"/>
+                            <Rectangle Canvas.Left="21" Canvas.Top="16" Width="4" Height="4" Fill="{StaticResource AccentCyanBrush}" RadiusX="0.5" RadiusY="0.5"/>
+                            <Rectangle Canvas.Left="27" Canvas.Top="16" Width="4" Height="4" Fill="{StaticResource BorderDarkBrush}" RadiusX="0.5" RadiusY="0.5"/>
+                            <Rectangle Canvas.Left="33" Canvas.Top="16" Width="4" Height="4" Fill="{StaticResource BorderDarkBrush}" RadiusX="0.5" RadiusY="0.5"/>
+                            <Rectangle Canvas.Left="39" Canvas.Top="16" Width="4" Height="4" Fill="{StaticResource BorderDarkBrush}" RadiusX="0.5" RadiusY="0.5"/>
+                            <Ellipse   Canvas.Left="46" Canvas.Top="16" Width="4" Height="4" Fill="{StaticResource AccentCyanBrush}" Opacity="0.5"/>
+
+                            <!-- Switch 3 — bottom, fully active -->
+                            <Rectangle Canvas.Left="4" Canvas.Top="26" Width="48" Height="10"
+                                       Fill="{StaticResource CardDarkBrush}" RadiusX="2" RadiusY="2"/>
+                            <Rectangle Canvas.Left="4" Canvas.Top="26" Width="48" Height="10"
+                                       Fill="Transparent" Stroke="{StaticResource AccentCyanBrush}"
+                                       StrokeThickness="1" RadiusX="2" RadiusY="2"/>
+                            <Rectangle Canvas.Left="9"  Canvas.Top="29" Width="4" Height="4" Fill="{StaticResource AccentCyanBrush}" RadiusX="0.5" RadiusY="0.5"/>
+                            <Rectangle Canvas.Left="15" Canvas.Top="29" Width="4" Height="4" Fill="{StaticResource AccentCyanBrush}" RadiusX="0.5" RadiusY="0.5"/>
+                            <Rectangle Canvas.Left="21" Canvas.Top="29" Width="4" Height="4" Fill="{StaticResource AccentCyanBrush}" RadiusX="0.5" RadiusY="0.5"/>
+                            <Rectangle Canvas.Left="27" Canvas.Top="29" Width="4" Height="4" Fill="{StaticResource AccentCyanBrush}" RadiusX="0.5" RadiusY="0.5"/>
+                            <Rectangle Canvas.Left="33" Canvas.Top="29" Width="4" Height="4" Fill="{StaticResource AccentCyanBrush}" RadiusX="0.5" RadiusY="0.5"/>
+                            <Rectangle Canvas.Left="39" Canvas.Top="29" Width="4" Height="4" Fill="{StaticResource AccentCyanBrush}" RadiusX="0.5" RadiusY="0.5"/>
+                            <Ellipse   Canvas.Left="46" Canvas.Top="29" Width="4" Height="4" Fill="{StaticResource AccentCyanBrush}"/>
+                        </Canvas>
+                    </Viewbox>
                     <StackPanel VerticalAlignment="Center">
                         <TextBlock Text="IP Scanner" FontSize="22" FontWeight="Bold"
                                    Foreground="{StaticResource TextPrimaryBrush}" FontFamily="Segoe UI"/>
@@ -66,38 +114,84 @@
                     </Grid.RowDefinitions>
 
                     <!-- INPUT CONTROLS -->
-                    <Border Grid.Row="0" Padding="24,12,24,16">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
+                    <Border Grid.Row="0" Padding="24,12,24,12">
+                        <StackPanel>
+                            <!-- Top row: subnet entry + action buttons -->
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
 
-                            <TextBlock Grid.Column="0" Text="Subnet:" FontSize="14" FontFamily="Segoe UI"
-                                       Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center"
-                                       Margin="0,0,12,0"/>
+                                <TextBlock Grid.Column="0" Text="Add Subnet:" FontSize="14" FontFamily="Segoe UI"
+                                           Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center"
+                                           Margin="0,0,12,0"/>
 
-                            <TextBox x:Name="CidrInput" Grid.Column="1" Style="{StaticResource ModernTextBox}"
-                                     Text="192.168.1.0/24" VerticalAlignment="Center"
-                                     KeyDown="CidrInput_KeyDown"/>
+                                <TextBox x:Name="CidrInput" Grid.Column="1" Style="{StaticResource ModernTextBox}"
+                                         VerticalAlignment="Center" KeyDown="CidrInput_KeyDown"/>
 
-                            <CheckBox x:Name="ShowAllToggle" Grid.Column="2" Content="Show Unreachable" 
-                                     Style="{StaticResource ModernCheckBox}" 
-                                     Margin="16,0,0,0" VerticalAlignment="Center"
-                                     Checked="FilterToggle_Changed" Unchecked="FilterToggle_Changed"/>
+                                <Button Grid.Column="2" Content="+ Add" Style="{StaticResource GhostButton}"
+                                        Margin="8,0,0,0" VerticalAlignment="Center"
+                                        Click="AddSubnet_Click"/>
 
-                            <Button x:Name="ScanButton" Grid.Column="3" Content="⚡ Scan"
-                                    Style="{StaticResource ScanButton}" Margin="12,0,0,0"
-                                    Click="ScanButton_Click" VerticalAlignment="Center"/>
+                                <Button Grid.Column="3" Content="⊕ Auto-detect" Style="{StaticResource GhostButton}"
+                                        Margin="8,0,0,0" VerticalAlignment="Center"
+                                        Click="AutoDetectSubnets_Click"/>
 
-                            <Button x:Name="StopButton" Grid.Column="4" Content="■ Stop"
-                                    Style="{StaticResource StopButton}" Margin="8,0,0,0"
-                                    Click="StopButton_Click" VerticalAlignment="Center"
-                                    Visibility="Collapsed"/>
-                        </Grid>
+                                <CheckBox x:Name="ShowAllToggle" Grid.Column="4" Content="Show Unreachable"
+                                         Style="{StaticResource ModernCheckBox}"
+                                         Margin="16,0,0,0" VerticalAlignment="Center"
+                                         Checked="FilterToggle_Changed" Unchecked="FilterToggle_Changed"/>
+
+                                <Button x:Name="ScanButton" Grid.Column="5" Content="⚡ Scan"
+                                        Style="{StaticResource ScanButton}" Margin="12,0,0,0"
+                                        Click="ScanButton_Click" VerticalAlignment="Center"/>
+
+                                <Button x:Name="StopButton" Grid.Column="6" Content="■ Stop"
+                                        Style="{StaticResource StopButton}" Margin="8,0,0,0"
+                                        Click="StopButton_Click" VerticalAlignment="Center"
+                                        Visibility="Collapsed"/>
+                            </Grid>
+
+                            <!-- Subnet chip list — each chip is a subnet to include in the scan -->
+                            <ItemsControl x:Name="SubnetChipList" Margin="0,10,0,0">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Background="{StaticResource CardDarkBrush}" CornerRadius="6"
+                                                Padding="6,4" Margin="0,0,8,4"
+                                                BorderBrush="{StaticResource BorderDarkBrush}" BorderThickness="1">
+                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                <CheckBox IsChecked="{Binding IsSelected}"
+                                                          Style="{StaticResource ModernCheckBox}"
+                                                          Margin="0,0,6,0"/>
+                                                <TextBlock Text="{Binding Cidr}"
+                                                           Foreground="{StaticResource TextPrimaryBrush}"
+                                                           FontSize="12" FontFamily="Consolas"
+                                                           VerticalAlignment="Center"/>
+                                                <TextBlock Text="{Binding Label}"
+                                                           Foreground="{StaticResource TextSecondaryBrush}"
+                                                           FontSize="11" FontFamily="Segoe UI"
+                                                           VerticalAlignment="Center" Margin="6,0,0,0"/>
+                                                <Button Content="✕" Click="RemoveSubnet_Click" Tag="{Binding}"
+                                                        Style="{StaticResource CircleStopButton}"
+                                                        Width="18" Height="18" FontSize="9"
+                                                        Margin="8,0,0,0"/>
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
                     </Border>
 
                     <!-- PROGRESS -->
@@ -205,6 +299,8 @@
                                 </DataGridTemplateColumn>
 
                                 <DataGridTextColumn Header="IP Address" Binding="{Binding IP}" Width="130" SortMemberPath="SortKey"/>
+                                <DataGridTextColumn Header="Subnet" Binding="{Binding Subnet}" Width="130"
+                                                    Foreground="{StaticResource TextSecondaryBrush}"/>
                                 <DataGridTextColumn Header="Hostname" Binding="{Binding Hostname}" Width="*"/>
                                 <DataGridTextColumn Header="MAC Address" Binding="{Binding MAC}" Width="150"/>
                                 <DataGridTextColumn Header="Vendor" Binding="{Binding Vendor}" Width="120" Foreground="{StaticResource AccentCyanBrush}"/>
@@ -241,7 +337,7 @@
                                 </Grid.ColumnDefinitions>
                                 
                                 <TextBlock Grid.Column="0" Text="Test Duration:" VerticalAlignment="Center" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,12,0"/>
-                                <ComboBox x:Name="DnsTestDuration" Grid.Column="1" Width="120" Style="{StaticResource {x:Static ToolBar.ComboBoxStyleKey}}" BorderBrush="{StaticResource BorderDarkBrush}" Background="{StaticResource SecondaryDarkBrush}" Foreground="{StaticResource TextPrimaryBrush}" SelectedIndex="1">
+                                <ComboBox x:Name="DnsTestDuration" Grid.Column="1" Width="120" Style="{StaticResource ModernComboBox}" SelectedIndex="1">
                                     <ComboBoxItem Content="5 Seconds" Tag="5"/>
                                     <ComboBoxItem Content="15 Seconds" Tag="15"/>
                                     <ComboBoxItem Content="30 Seconds" Tag="30"/>
@@ -288,6 +384,314 @@
                                 <DataGridTextColumn Header="Max" Binding="{Binding MaxLatencyCached, StringFormat={}{0:F1} ms}" Width="80"/>
                             </DataGrid.Columns>
                         </DataGrid>
+                        </Border>
+                    </Grid>
+                </Grid>
+            </TabItem>
+
+            <!-- TAB 3: VISUAL TRACEROUTE -->
+            <TabItem Header="Visual Traceroute">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="300"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Sidebar: Targets -->
+                    <Border Grid.Column="0" Background="{StaticResource SecondaryDarkBrush}" BorderBrush="{StaticResource BorderDarkBrush}" BorderThickness="0,0,1,0">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <Border Grid.Row="0" Padding="16" Background="{StaticResource CardDarkBrush}">
+                                <StackPanel>
+                                    <TextBlock Text="Monitored Hosts" FontSize="14" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,12"/>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBox x:Name="NewTraceTarget" Style="{StaticResource ModernTextBox}" Padding="8,6" Text="8.8.8.8"/>
+                                        <Button Grid.Column="1" Content="+" Click="AddTraceTarget_Click" Width="32" Margin="8,0,0,0" Style="{StaticResource ScanButton}" Padding="0"/>
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+
+                            <ListBox x:Name="TraceTargetsList" Grid.Row="1" Background="Transparent" BorderThickness="0" Padding="8" SelectionChanged="TraceTarget_SelectionChanged">
+                                <ListBox.ItemContainerStyle>
+                                    <Style TargetType="ListBoxItem">
+                                        <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+                                        <Setter Property="Background" Value="Transparent"/>
+                                        <Setter Property="BorderThickness" Value="0"/>
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="ListBoxItem">
+                                                    <ContentPresenter/>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+                                </ListBox.ItemContainerStyle>
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border x:Name="TargetCard" Background="{StaticResource CardDarkBrush}" CornerRadius="6" Padding="12,8" Margin="0,0,0,8" BorderBrush="{StaticResource BorderDarkBrush}" BorderThickness="1">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <StackPanel>
+                                                    <TextBlock Text="{Binding Destination}" FontSize="14" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}"/>
+                                                    <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                                        <TextBlock Text="{Binding Status}" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                                        <TextBlock Text=" | " FontSize="11" Foreground="{StaticResource BorderDarkBrush}" Margin="4,0"/>
+                                                        <TextBlock Text="{Binding AverageLatency, StringFormat={}{0:F0}ms avg}" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                                        <TextBlock Text=" | " FontSize="11" Foreground="{StaticResource BorderDarkBrush}" Margin="4,0"/>
+                                                        <TextBlock Text="{Binding PacketLoss, StringFormat={}{0:F1}% loss}" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                                    </StackPanel>
+                                                </StackPanel>
+                                                <Button Grid.Column="1" Content="✕" Click="DeleteTraceTarget_Click" Style="{StaticResource CircleStopButton}" VerticalAlignment="Center"/>
+                                            </Grid>
+                                        </Border>
+                                        <DataTemplate.Triggers>
+                                            <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" Value="True">
+                                                <Setter TargetName="TargetCard" Property="BorderBrush" Value="{StaticResource AccentCyanBrush}"/>
+                                                <Setter TargetName="TargetCard" Property="BorderThickness" Value="2,1,1,1"/>
+                                            </DataTrigger>
+                                        </DataTemplate.Triggers>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+
+                            <Border Grid.Row="2" Padding="16" Background="{StaticResource CardDarkBrush}">
+                                <Button Content="▶ Start All" Style="{StaticResource ScanButton}" Click="StartAllTraces_Click"/>
+                            </Border>
+                        </Grid>
+                    </Border>
+
+                    <!-- Main Area: Trace Details -->
+                    <Grid x:Name="TraceDetailArea" Grid.Column="1">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="200" MinHeight="100"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- Session Header -->
+                        <Border Grid.Row="0" Padding="24" Background="{StaticResource PrimaryDarkBrush}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <TextBlock Text="{Binding Destination, FallbackValue=Select a host to view details}" FontSize="20" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}"/>
+                                    <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                        <TextBlock Text="Duration: " Foreground="{StaticResource TextSecondaryBrush}"/>
+                                        <TextBlock Text="{Binding ElapsedDisplay}" Foreground="{StaticResource AccentCyanBrush}" FontWeight="SemiBold"/>
+                                    </StackPanel>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                    <Button x:Name="ToggleTraceBtn" Click="ToggleTrace_Click">
+                                        <Button.Style>
+                                            <Style TargetType="Button" BasedOn="{StaticResource ScanButton}">
+                                                <Setter Property="Content" Value="▶ Resume"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsActive}" Value="True">
+                                                        <Setter Property="Content" Value="■ Stop"/>
+                                                        <Setter Property="Background" Value="{StaticResource ErrorRedBrush}"/>
+                                                        <Setter Property="Template">
+                                                            <Setter.Value>
+                                                                <ControlTemplate TargetType="Button">
+                                                                    <Border x:Name="btnBorder" CornerRadius="8" Padding="24,10" Background="{StaticResource ErrorRedBrush}">
+                                                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                                    </Border>
+                                                                    <ControlTemplate.Triggers>
+                                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                                            <Setter TargetName="btnBorder" Property="Background" Value="{StaticResource ErrorRedDarkBrush}"/>
+                                                                        </Trigger>
+                                                                    </ControlTemplate.Triggers>
+                                                                </ControlTemplate>
+                                                            </Setter.Value>
+                                                        </Setter>
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding Destination}" Value="{x:Null}">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Button.Style>
+                                    </Button>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+
+                        <!-- Hop List -->
+                        <Border Grid.Row="1" Margin="24,0,24,12" CornerRadius="8" Background="{StaticResource PrimaryDarkBrush}" BorderBrush="{StaticResource BorderDarkBrush}" BorderThickness="1" ClipToBounds="True">
+                            <Grid>
+                                <Border x:Name="TraceGridMask" Background="White" CornerRadius="8"/>
+                                <Border CornerRadius="8" Background="{StaticResource PrimaryDarkBrush}">
+                                    <Border.OpacityMask>
+                                        <VisualBrush Visual="{Binding ElementName=TraceGridMask}"/>
+                                    </Border.OpacityMask>
+                                    <DataGrid x:Name="TraceHopsGrid" ItemsSource="{Binding Hops}" AutoGenerateColumns="False" IsReadOnly="True" Background="Transparent" BorderThickness="0">
+                                        <DataGrid.Columns>
+                                            <DataGridTextColumn Header="Hop" Binding="{Binding HopNumber}" Width="50"/>
+                                            <DataGridTextColumn Header="Latency" Binding="{Binding Latency, StringFormat={}{0}ms}" Width="80">
+                                                <DataGridTextColumn.ElementStyle>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="FontWeight" Value="Bold"/>
+                                                        <Setter Property="Foreground" Value="{StaticResource AccentCyanBrush}"/>
+                                                    </Style>
+                                                </DataGridTextColumn.ElementStyle>
+                                            </DataGridTextColumn>
+                                            <DataGridTextColumn Header="IP Address" Binding="{Binding IP}" Width="150"/>
+                                            <DataGridTextColumn Header="Hostname" Binding="{Binding Hostname}" Width="*"/>
+                                        </DataGrid.Columns>
+                                    </DataGrid>
+                                </Border>
+                            </Grid>
+                        </Border>
+
+                        <!-- Vertical Splitter -->
+                        <GridSplitter Grid.Row="2" Height="6" HorizontalAlignment="Stretch" VerticalAlignment="Center" 
+                                      Background="Transparent" BorderBrush="Transparent" Cursor="SizeNS"/>
+
+                        <!-- Mini History Chart -->
+                        <Border Grid.Row="3" Margin="24,0,24,24" CornerRadius="8" Background="{StaticResource CardDarkBrush}" BorderBrush="{StaticResource BorderDarkBrush}" BorderThickness="1" Padding="16">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,12" VerticalAlignment="Center">
+                                    <TextBlock Text="Performance Timeline" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center" Margin="0,0,16,0"/>
+                                    <Border Background="{StaticResource PrimaryDarkBrush}" CornerRadius="6" Padding="2" BorderBrush="{StaticResource BorderDarkBrush}" BorderThickness="1">
+                                        <StackPanel Orientation="Horizontal">
+                                            <RadioButton Content="1m" Style="{StaticResource TimelineRadioButtonStyle}" Tag="1" IsChecked="True" Click="Interval_Click"/>
+                                            <RadioButton Content="5m" Style="{StaticResource TimelineRadioButtonStyle}" Tag="5" Click="Interval_Click"/>
+                                            <RadioButton Content="10m" Style="{StaticResource TimelineRadioButtonStyle}" Tag="10" Click="Interval_Click"/>
+                                            <RadioButton Content="1h" Style="{StaticResource TimelineRadioButtonStyle}" Tag="60" Click="Interval_Click"/>
+                                            <RadioButton Content="2h" Style="{StaticResource TimelineRadioButtonStyle}" Tag="120" Click="Interval_Click"/>
+                                            <RadioButton Content="8h" Style="{StaticResource TimelineRadioButtonStyle}" Tag="480" Click="Interval_Click"/>
+                                        </StackPanel>
+                                    </Border>
+                                    
+                                    <ToggleButton x:Name="PauseBtn" IsChecked="{Binding IsPaused, Mode=TwoWay}"
+                                                  Padding="12,4" Margin="12,0,0,0"
+                                                  Cursor="Hand">
+                                         <ToggleButton.Style>
+                                             <Style TargetType="ToggleButton" BasedOn="{StaticResource TimelineToggleButtonStyle}">
+                                                 <Setter Property="Content" Value="⏸ Pause"/>
+                                                 <Style.Triggers>
+                                                     <Trigger Property="IsChecked" Value="True">
+                                                         <Setter Property="Content" Value="▶ Resume"/>
+                                                         <Setter Property="Foreground" Value="{StaticResource OnlineGreenBrush}"/>
+                                                     </Trigger>
+                                                 </Style.Triggers>
+                                             </Style>
+                                         </ToggleButton.Style>
+                                     </ToggleButton>
+                                </StackPanel>
+                                
+                                <Grid Grid.Row="1">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="40"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    
+                                    <!-- Y-Axis Labels -->
+                                    <Grid Grid.Column="0">
+                                        <TextBlock Text="{Binding MaxLatencyValue, StringFormat={}{0:F0}}" FontSize="10" VerticalAlignment="Top" HorizontalAlignment="Right" Margin="0,0,8,0" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                        <TextBlock Text="0" FontSize="10" VerticalAlignment="Bottom" HorizontalAlignment="Right" Margin="0,0,8,0" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                        <TextBlock Text="ms" FontSize="10" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,8,-20" Foreground="{StaticResource TextSecondaryBrush}" RenderTransformOrigin="0.5,0.5">
+                                            <TextBlock.RenderTransform>
+                                                <RotateTransform Angle="-90"/>
+                                            </TextBlock.RenderTransform>
+                                        </TextBlock>
+                                    </Grid>
+
+                                    <!-- Chart Area -->
+                                    <Border Grid.Column="1" BorderBrush="{StaticResource BorderDarkBrush}" BorderThickness="1,0,0,1">
+                                        <Grid x:Name="ChartContainer" ClipToBounds="True" Background="Transparent" MouseMove="ChartContainer_MouseMove" MouseLeave="ChartContainer_MouseLeave">
+                                            <!-- Background Grid Lines -->
+                                            <Border BorderBrush="{StaticResource BorderDarkBrush}" BorderThickness="0,1,0,0" Height="1" VerticalAlignment="Center" Opacity="0.3"/>
+
+                                            <!-- High-Latency Threshold Visuals -->
+                                            <Canvas IsHitTestVisible="False">
+                                                <!-- Shadow/Zone above 100ms (top of chart) -->
+                                                <Rectangle Fill="{StaticResource ErrorRedBrush}" Opacity="0.05" Width="{Binding ActualWidth, ElementName=ChartContainer}">
+                                                    <Rectangle.Height>
+                                                        <MultiBinding Converter="{StaticResource LatencyToCoordinateConverter}">
+                                                            <Binding Source="100"/>
+                                                            <Binding Path="MaxLatencyValue"/>
+                                                            <Binding Path="ActualHeight" ElementName="ChartContainer"/>
+                                                        </MultiBinding>
+                                                    </Rectangle.Height>
+                                                </Rectangle>
+
+                                                <!-- 100ms Threshold Line -->
+                                                <Line X1="0" X2="{Binding ActualWidth, ElementName=ChartContainer}" Stroke="{StaticResource WarningOrangeBrush}" StrokeThickness="1" StrokeDashArray="4,4" Opacity="0.4">
+                                                    <Line.Y1>
+                                                        <MultiBinding Converter="{StaticResource LatencyToCoordinateConverter}">
+                                                            <Binding Source="100"/>
+                                                            <Binding Path="MaxLatencyValue"/>
+                                                            <Binding Path="ActualHeight" ElementName="ChartContainer"/>
+                                                        </MultiBinding>
+                                                    </Line.Y1>
+                                                    <Line.Y2>
+                                                        <Binding Path="Y1" RelativeSource="{RelativeSource Self}"/>
+                                                    </Line.Y2>
+                                                </Line>
+
+                                                <!-- Label for Threshold -->
+                                                <TextBlock Text="100ms Threshold" FontSize="9" Foreground="{StaticResource WarningOrangeBrush}" Opacity="0.6" Margin="4,-12,0,0">
+                                                    <Canvas.Top>
+                                                        <MultiBinding Converter="{StaticResource LatencyToCoordinateConverter}">
+                                                            <Binding Source="100"/>
+                                                            <Binding Path="MaxLatencyValue"/>
+                                                            <Binding Path="ActualHeight" ElementName="ChartContainer"/>
+                                                        </MultiBinding>
+                                                    </Canvas.Top>
+                                                </TextBlock>
+                                            </Canvas>
+                                            
+                                            <!-- The Line Chart -->
+                                            <Polyline x:Name="LatencyChartLine" StrokeThickness="0.8" StrokeLineJoin="Round" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                                                <Polyline.Stroke>
+                                                    <MultiBinding Converter="{StaticResource LatencyToBrushConverter}">
+                                                        <Binding Path="MaxLatencyValue"/>
+                                                        <Binding Path="FilteredHistory.Count"/>
+                                                    </MultiBinding>
+                                                </Polyline.Stroke>
+                                                <Polyline.Points>
+                                                    <MultiBinding Converter="{StaticResource LatencyToPointsConverter}">
+                                                        <Binding Path="FilteredHistory"/>
+                                                        <Binding Path="ActualWidth" ElementName="ChartContainer"/>
+                                                        <Binding Path="ActualHeight" ElementName="ChartContainer"/>
+                                                        <Binding Path="MaxLatencyValue"/>
+                                                    </MultiBinding>
+                                                </Polyline.Points>
+                                            </Polyline>
+
+                                            <!-- High-Precision Tooltip -->
+                                            <Canvas IsHitTestVisible="False">
+                                                <Line x:Name="TooltipLine" Y1="0" Y2="{Binding ActualHeight, ElementName=ChartContainer}" Stroke="{StaticResource TextSecondaryBrush}" StrokeThickness="1" StrokeDashArray="2,2" Visibility="Collapsed"/>
+                                                <Border x:Name="TooltipPopup" Background="{StaticResource PrimaryDarkBrush}" BorderBrush="{StaticResource AccentCyanBrush}" BorderThickness="1" Padding="8,4" CornerRadius="4" Visibility="Collapsed">
+                                                    <StackPanel>
+                                                        <TextBlock x:Name="TooltipTime" Text="00:00:00" FontSize="10" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                                        <TextBlock x:Name="TooltipLatency" Text="0ms" FontSize="11" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}"/>
+                                                    </StackPanel>
+                                                </Border>
+                                            </Canvas>
+                                        </Grid>
+                                    </Border>
+                                </Grid>
+                            </Grid>
                         </Border>
                     </Grid>
                 </Grid>

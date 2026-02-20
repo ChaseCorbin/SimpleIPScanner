@@ -12,7 +12,7 @@ namespace SimpleIPScanner.Services
     /// </summary>
     public static class MacVendorLookup
     {
-        private static Dictionary<string, string>? _ouiMap;
+        private static volatile Dictionary<string, string>? _ouiMap;
         private static readonly object _lock = new();
         private static readonly string CacheFile = Path.Combine(
             AppDomain.CurrentDomain.BaseDirectory, "oui_cache.txt");
@@ -79,9 +79,8 @@ namespace SimpleIPScanner.Services
             }
 
             var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            var lines = File.ReadAllLines(CacheFile);
 
-            foreach (var line in lines)
+            foreach (var line in File.ReadLines(CacheFile))
             {
                 // IEEE CSV format: Registry,Assignment,Organization Name,Organization Address
                 // Example: MA-L,00001C,The Trumpion Microelectronics INC.,"addr..."

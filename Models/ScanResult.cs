@@ -9,6 +9,7 @@ namespace SimpleIPScanner.Models
     public class ScanResult : INotifyPropertyChanged
     {
         private string _ip = "";
+        private string _subnet = "";
         private string _hostname = "N/A";
         private string _mac = "N/A";
         private string _vendor = "";
@@ -18,11 +19,19 @@ namespace SimpleIPScanner.Models
         private string _openPorts = "";
         private bool _isPortScanning;
         private bool _portsVisible;
+        private uint? _sortKey;
 
         public string IP
         {
             get => _ip;
-            set { _ip = value; OnPropertyChanged(); }
+            set { _ip = value; _sortKey = null; OnPropertyChanged(); }
+        }
+
+        /// <summary>The source subnet CIDR this device was discovered in, e.g. "192.168.1.0/24".</summary>
+        public string Subnet
+        {
+            get => _subnet;
+            set { _subnet = value; OnPropertyChanged(); }
         }
 
         public string Hostname
@@ -169,12 +178,14 @@ namespace SimpleIPScanner.Models
         {
             get
             {
+                if (_sortKey.HasValue) return _sortKey.Value;
                 var parts = IP.Split('.');
-                if (parts.Length != 4) return 0;
-                return (uint.Parse(parts[0]) << 24)
-                     | (uint.Parse(parts[1]) << 16)
-                     | (uint.Parse(parts[2]) << 8)
-                     | uint.Parse(parts[3]);
+                if (parts.Length != 4) { _sortKey = 0; return 0; }
+                _sortKey = (uint.Parse(parts[0]) << 24)
+                         | (uint.Parse(parts[1]) << 16)
+                         | (uint.Parse(parts[2]) << 8)
+                         | uint.Parse(parts[3]);
+                return _sortKey.Value;
             }
         }
 

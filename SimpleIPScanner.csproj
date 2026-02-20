@@ -8,6 +8,12 @@
     <Nullable>enable</Nullable>
     <ApplicationIcon />
     <StartupObject />
+    <Version>1.2.0</Version>
+    <AssemblyVersion>1.2.0.0</AssemblyVersion>
+    <FileVersion>1.2.0.0</FileVersion>
+    <Product>Simple IP Scanner</Product>
+    <Company>Chase Corbin</Company>
+    <Copyright>© 2025 Chase Corbin</Copyright>
   </PropertyGroup>
 
   <ItemGroup>

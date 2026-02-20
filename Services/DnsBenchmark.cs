@@ -98,10 +98,14 @@ namespace SimpleIPScanner.Services
 
         private byte[] ConstructDnsQuery(string domain)
         {
+            // Use a random transaction ID so concurrent queries don't collide
+            Span<byte> txId = stackalloc byte[2];
+            Random.Shared.NextBytes(txId);
+
             // Simple DNS Header (Transaction ID, Flags, Questions, etc.)
             List<byte> packet = new()
             {
-                0xAB, 0xCD, // ID
+                txId[0], txId[1], // Randomized ID
                 0x01, 0x00, // Query flags (Standard query)
                 0x00, 0x01, // 1 Question
                 0x00, 0x00, // 0 Answers
