@@ -78,6 +78,11 @@ namespace SimpleIPScanner.Models
         public double AverageLatency => FilteredHistory.Any(p => p.Latency >= 0) ? FilteredHistory.Where(p => p.Latency >= 0).Average(p => p.Latency) : 0;
         public double PacketLoss => CalculatePacketLoss();
 
+        private string TimeFormat => ChartIntervalMinutes <= 10 ? "HH:mm:ss" : "HH:mm";
+        public string XAxisStartLabel => FilteredHistory.Count > 0 ? FilteredHistory[0].Timestamp.ToString(TimeFormat) : "";
+        public string XAxisMidLabel   => FilteredHistory.Count > 1 ? FilteredHistory[FilteredHistory.Count / 2].Timestamp.ToString(TimeFormat) : "";
+        public string XAxisEndLabel   => FilteredHistory.Count > 0 ? FilteredHistory[FilteredHistory.Count - 1].Timestamp.ToString(TimeFormat) : "";
+
         private double CalculatePacketLoss()
         {
             var history = FilteredHistory;
@@ -101,17 +106,20 @@ namespace SimpleIPScanner.Models
             OnPropertyChanged(nameof(AverageLatency));
             OnPropertyChanged(nameof(PacketLoss));
             OnPropertyChanged(nameof(FilteredHistory));
+            OnPropertyChanged(nameof(XAxisStartLabel));
+            OnPropertyChanged(nameof(XAxisMidLabel));
+            OnPropertyChanged(nameof(XAxisEndLabel));
         }
 
         public void AddDataPoint(long latency)
         {
             LatencyHistory.Add(new TraceDataPoint { Timestamp = DateTime.Now, Latency = latency >= 0 ? (double)latency : -1.0 });
             
-            // Cleanup data older than 8 hours
-            var eightHrAgo = DateTime.Now.AddHours(-8);
-            if (LatencyHistory.Count > 0 && LatencyHistory[0].Timestamp < eightHrAgo)
+            // Cleanup data older than 2 hours
+            var twoHrAgo = DateTime.Now.AddHours(-2);
+            if (LatencyHistory.Count > 0 && LatencyHistory[0].Timestamp < twoHrAgo)
             {
-                LatencyHistory.RemoveAll(p => p.Timestamp < eightHrAgo);
+                LatencyHistory.RemoveAll(p => p.Timestamp < twoHrAgo);
             }
 
             UpdateFilteredHistory();

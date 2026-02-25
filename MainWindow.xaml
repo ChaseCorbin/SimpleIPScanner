@@ -183,9 +183,8 @@
                                                            FontSize="11" FontFamily="Segoe UI"
                                                            VerticalAlignment="Center" Margin="6,0,0,0"/>
                                                 <Button Content="✕" Click="RemoveSubnet_Click" Tag="{Binding}"
-                                                        Style="{StaticResource CircleStopButton}"
-                                                        Width="18" Height="18" FontSize="9"
-                                                        Margin="8,0,0,0"/>
+                                                        Style="{StaticResource ChipRemoveButton}"
+                                                        FontSize="11" Margin="8,0,0,0"/>
                                             </StackPanel>
                                         </Border>
                                     </DataTemplate>
@@ -346,6 +345,80 @@
                                 <Button x:Name="StartDnsBenchmarkBtn" Grid.Column="3" Content="🚀 Start Benchmark" Style="{StaticResource ScanButton}" Click="StartDnsBenchmark_Click"/>
                                 <Button x:Name="StopDnsBenchmarkBtn" Grid.Column="3" Content="■ Stop" Style="{StaticResource StopButton}" Click="StopDnsBenchmark_Click" Visibility="Collapsed"/>
                             </Grid>
+
+                            <!-- Custom DNS Server Input -->
+                            <Grid Margin="0,12,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="150"/>
+                                    <ColumnDefinition Width="8"/>
+                                    <ColumnDefinition Width="190"/>
+                                    <ColumnDefinition Width="8"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <TextBlock Grid.Column="0" Text="Custom Servers:" VerticalAlignment="Center" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,12,0"/>
+
+                                <!-- IP Address input with placeholder -->
+                                <Grid Grid.Column="1">
+                                    <TextBox x:Name="CustomDnsIp" Style="{StaticResource ModernTextBox}" Padding="8,6" FontSize="12"/>
+                                    <TextBlock Text="IP Address" IsHitTestVisible="False" FontSize="12" Margin="10,0,0,0"
+                                               Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding Text, ElementName=CustomDnsIp}" Value="">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </Grid>
+
+                                <!-- Name input with placeholder -->
+                                <Grid Grid.Column="3">
+                                    <TextBox x:Name="CustomDnsName" Style="{StaticResource ModernTextBox}" Padding="8,6" FontSize="12"/>
+                                    <TextBlock Text="Name (optional)" IsHitTestVisible="False" FontSize="12" Margin="10,0,0,0"
+                                               Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding Text, ElementName=CustomDnsName}" Value="">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </Grid>
+
+                                <Button Grid.Column="5" Content="+ Add" Style="{StaticResource ScanButton}" Padding="12,6" Click="AddCustomDnsServer_Click"/>
+                            </Grid>
+
+                            <!-- Added custom servers shown as removable chips -->
+                            <ItemsControl x:Name="CustomDnsServersList" Margin="0,8,0,0">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Background="{StaticResource SecondaryDarkBrush}" BorderBrush="{StaticResource BorderDarkBrush}" BorderThickness="1" CornerRadius="6" Padding="8,4" Margin="0,0,6,4">
+                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding DisplayName}" FontSize="11" Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                                                <Button Content="×" Tag="{Binding}" Click="RemoveCustomDnsServer_Click"
+                                                        Style="{StaticResource ChipRemoveButton}"
+                                                        FontSize="13" Padding="6,0,0,0" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
                         </StackPanel>
                     </Border>
 
@@ -453,7 +526,7 @@
                                                         <TextBlock Text="{Binding PacketLoss, StringFormat={}{0:F1}% loss}" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"/>
                                                     </StackPanel>
                                                 </StackPanel>
-                                                <Button Grid.Column="1" Content="✕" Click="DeleteTraceTarget_Click" Style="{StaticResource CircleStopButton}" VerticalAlignment="Center"/>
+                                                <Button Grid.Column="1" Content="✕" Click="DeleteTraceTarget_Click" Style="{StaticResource ChipRemoveButton}" FontSize="13" VerticalAlignment="Center"/>
                                             </Grid>
                                         </Border>
                                         <DataTemplate.Triggers>
@@ -572,12 +645,11 @@
                                     <TextBlock Text="Performance Timeline" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center" Margin="0,0,16,0"/>
                                     <Border Background="{StaticResource PrimaryDarkBrush}" CornerRadius="6" Padding="2" BorderBrush="{StaticResource BorderDarkBrush}" BorderThickness="1">
                                         <StackPanel Orientation="Horizontal">
-                                            <RadioButton Content="1m" Style="{StaticResource TimelineRadioButtonStyle}" Tag="1" IsChecked="True" Click="Interval_Click"/>
-                                            <RadioButton Content="5m" Style="{StaticResource TimelineRadioButtonStyle}" Tag="5" Click="Interval_Click"/>
-                                            <RadioButton Content="10m" Style="{StaticResource TimelineRadioButtonStyle}" Tag="10" Click="Interval_Click"/>
-                                            <RadioButton Content="1h" Style="{StaticResource TimelineRadioButtonStyle}" Tag="60" Click="Interval_Click"/>
-                                            <RadioButton Content="2h" Style="{StaticResource TimelineRadioButtonStyle}" Tag="120" Click="Interval_Click"/>
-                                            <RadioButton Content="8h" Style="{StaticResource TimelineRadioButtonStyle}" Tag="480" Click="Interval_Click"/>
+                                            <RadioButton x:Name="RbInterval1m"  Content="1m"  Style="{StaticResource TimelineRadioButtonStyle}" Tag="1"   IsChecked="True" Click="Interval_Click"/>
+                                            <RadioButton x:Name="RbInterval5m"  Content="5m"  Style="{StaticResource TimelineRadioButtonStyle}" Tag="5"   Click="Interval_Click"/>
+                                            <RadioButton x:Name="RbInterval10m" Content="10m" Style="{StaticResource TimelineRadioButtonStyle}" Tag="10"  Click="Interval_Click"/>
+                                            <RadioButton x:Name="RbInterval1h"  Content="1h"  Style="{StaticResource TimelineRadioButtonStyle}" Tag="60"  Click="Interval_Click"/>
+                                            <RadioButton x:Name="RbInterval2h"  Content="2h"  Style="{StaticResource TimelineRadioButtonStyle}" Tag="120" Click="Interval_Click"/>
                                         </StackPanel>
                                     </Border>
                                     
@@ -603,9 +675,13 @@
                                         <ColumnDefinition Width="40"/>
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
-                                    
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="*"/>
+                                        <RowDefinition Height="16"/>
+                                    </Grid.RowDefinitions>
+
                                     <!-- Y-Axis Labels -->
-                                    <Grid Grid.Column="0">
+                                    <Grid Grid.Column="0" Grid.Row="0">
                                         <TextBlock Text="{Binding MaxLatencyValue, StringFormat={}{0:F0}}" FontSize="10" VerticalAlignment="Top" HorizontalAlignment="Right" Margin="0,0,8,0" Foreground="{StaticResource TextSecondaryBrush}"/>
                                         <TextBlock Text="0" FontSize="10" VerticalAlignment="Bottom" HorizontalAlignment="Right" Margin="0,0,8,0" Foreground="{StaticResource TextSecondaryBrush}"/>
                                         <TextBlock Text="ms" FontSize="10" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,8,-20" Foreground="{StaticResource TextSecondaryBrush}" RenderTransformOrigin="0.5,0.5">
@@ -616,7 +692,7 @@
                                     </Grid>
 
                                     <!-- Chart Area -->
-                                    <Border Grid.Column="1" BorderBrush="{StaticResource BorderDarkBrush}" BorderThickness="1,0,0,1">
+                                    <Border Grid.Column="1" Grid.Row="0" BorderBrush="{StaticResource BorderDarkBrush}" BorderThickness="1,0,0,1">
                                         <Grid x:Name="ChartContainer" ClipToBounds="True" Background="Transparent" MouseMove="ChartContainer_MouseMove" MouseLeave="ChartContainer_MouseLeave">
                                             <!-- Background Grid Lines -->
                                             <Border BorderBrush="{StaticResource BorderDarkBrush}" BorderThickness="0,1,0,0" Height="1" VerticalAlignment="Center" Opacity="0.3"/>
@@ -690,6 +766,13 @@
                                             </Canvas>
                                         </Grid>
                                     </Border>
+
+                                    <!-- X-Axis Time Labels -->
+                                    <Grid Grid.Column="1" Grid.Row="1" Margin="0,3,0,0">
+                                        <TextBlock Text="{Binding XAxisStartLabel}" FontSize="9" Foreground="{StaticResource TextSecondaryBrush}" HorizontalAlignment="Left"/>
+                                        <TextBlock Text="{Binding XAxisMidLabel}"   FontSize="9" Foreground="{StaticResource TextSecondaryBrush}" HorizontalAlignment="Center"/>
+                                        <TextBlock Text="{Binding XAxisEndLabel}"   FontSize="9" Foreground="{StaticResource TextSecondaryBrush}" HorizontalAlignment="Right"/>
+                                    </Grid>
                                 </Grid>
                             </Grid>
                         </Border>

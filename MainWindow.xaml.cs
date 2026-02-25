@@ -18,12 +18,20 @@ using SimpleIPScanner.Services;
 
 namespace SimpleIPScanner
 {
+    public class CustomDnsEntry
+    {
+        public string Ip   { get; set; } = "";
+        public string Name { get; set; } = "";
+        public string DisplayName => string.IsNullOrWhiteSpace(Name) ? Ip : $"{Name} ({Ip})";
+    }
+
     public partial class MainWindow : Window
     {
         private readonly ObservableCollection<ScanResult> _results = new();
         private readonly ObservableCollection<DnsBenchmarkResult> _dnsResults = new();
         private readonly ObservableCollection<TraceSession> _traceSessions = new();
         private readonly Dictionary<TraceSession, CancellationTokenSource> _traceCts = new();
+        private readonly ObservableCollection<CustomDnsEntry> _customDnsServers = new();
 
         // Subnet list for multi-subnet / multi-VLAN scanning
         private readonly ObservableCollection<SubnetEntry> _subnets = new();
@@ -53,6 +61,7 @@ namespace SimpleIPScanner
             };
             ResultsGrid.ItemsSource = _resultsView;
             DnsResultsGrid.ItemsSource = _dnsResults;
+            CustomDnsServersList.ItemsSource = _customDnsServers;
             TraceTargetsList.ItemsSource = _traceSessions;
             SubnetChipList.ItemsSource = _subnets;
 
@@ -465,6 +474,7 @@ namespace SimpleIPScanner
 
                 var tasks = DnsBenchmark.CommonServers
                     .Select(s => benchmark.RunBenchmarkAsync(s.Ip, s.Name, duration, _dnsCts.Token))
+                    .Concat(_customDnsServers.Select(s => benchmark.RunBenchmarkAsync(s.Ip, s.Name, duration, _dnsCts.Token)))
                     .Concat(new[] { benchmark.RunBenchmarkAsync("127.0.0.1", "Local / System Default", duration, _dnsCts.Token) });
 
                 await Task.WhenAll(tasks);
@@ -492,6 +502,39 @@ namespace SimpleIPScanner
         private void StopDnsBenchmark_Click(object sender, RoutedEventArgs e)
         {
             _dnsCts?.Cancel();
+        }
+
+        private void AddCustomDnsServer_Click(object sender, RoutedEventArgs e)
+        {
+            string ip   = CustomDnsIp.Text.Trim();
+            string name = CustomDnsName.Text.Trim();
+
+            if (!System.Net.IPAddress.TryParse(ip, out _))
+            {
+                MessageBox.Show("Please enter a valid IPv4 or IPv6 address.", "Invalid IP", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            if (_customDnsServers.Any(s => s.Ip == ip))
+            {
+                MessageBox.Show("That server is already in the list.", "Duplicate", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            _customDnsServers.Add(new CustomDnsEntry
+            {
+                Ip   = ip,
+                Name = string.IsNullOrWhiteSpace(name) ? ip : name
+            });
+
+            CustomDnsIp.Text   = "";
+            CustomDnsName.Text = "";
+        }
+
+        private void RemoveCustomDnsServer_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button btn && btn.Tag is CustomDnsEntry entry)
+                _customDnsServers.Remove(entry);
         }
 
         #endregion
@@ -527,9 +570,21 @@ namespace SimpleIPScanner
         private void TraceTarget_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (TraceTargetsList.SelectedItem is TraceSession session)
+            {
                 TraceDetailArea.DataContext = session;
+                SyncIntervalButtons(session.ChartIntervalMinutes);
+            }
             else
                 TraceDetailArea.DataContext = null;
+        }
+
+        private void SyncIntervalButtons(int minutes)
+        {
+            foreach (var rb in new[] { RbInterval1m, RbInterval5m, RbInterval10m, RbInterval1h, RbInterval2h })
+            {
+                if (rb.Tag is string tag && int.TryParse(tag, out int tagMins))
+                    rb.IsChecked = tagMins == minutes;
+            }
         }
 
         private async void ToggleTrace_Click(object sender, RoutedEventArgs e)
@@ -568,7 +623,7 @@ namespace SimpleIPScanner
                 var pingSender = new System.Net.NetworkInformation.Ping();
                 while (!cts.Token.IsCancellationRequested)
                 {
-                    if (session.Elapsed.TotalHours >= 8) { Dispatcher.Invoke(() => StopTrace(session)); break; }
+                    if (session.Elapsed.TotalHours >= 2) { Dispatcher.Invoke(() => StopTrace(session)); break; }
 
                     try
                     {
