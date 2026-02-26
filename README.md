@@ -7,7 +7,7 @@
 
 A modern, high-performance WPF application for network discovery, DNS performance testing, and visual traceroute monitoring.
 
-![Version](https://img.shields.io/badge/Version-1.2.0-10B981)
+![Version](https://img.shields.io/badge/Version-1.4.1-10B981)
 ![Platform](https://img.shields.io/badge/Platform-Windows-0078d4)
 ![Framework](https://img.shields.io/badge/Framework-.NET%208-512bd4)
 
@@ -15,22 +15,18 @@ A modern, high-performance WPF application for network discovery, DNS performanc
 
 ## 📥 Download & Quick Start
 
-### 1. Download the Executable
-Go to the [**Releases**](https://github.com/ChaseCorbin/SimpleIPScanner/releases) page and download the latest `SimpleIPScanner.exe`.
+### 1. Download the Installer
+Go to the [**Releases**](https://github.com/ChaseCorbin/SimpleIPScanner/releases) page and download `SimpleIPScanner-win-Setup.exe`.
 
-### 2. Verify Security (Optional but Recommended)
-To ensure the file hasn't been tampered with, verify its SHA-256 hash. The current build hash is listed in `SHA256SUM.txt` on the release page.
+### 2. Run the Installer
+Double-click `SimpleIPScanner-win-Setup.exe`. It will install the app to `%LocalAppData%\SimpleIPScanner\` and create a Start Menu shortcut automatically.
 
-Open PowerShell in your download folder and run:
-```powershell
-Get-FileHash .\SimpleIPScanner.exe
-```
-Compare the resulting hash with the one provided in `SHA256SUM.txt` on the Release page.
+*Note: Windows SmartScreen may show a warning because the app is not code-signed. Click "More Info" → "Run anyway".*
 
-### 3. Run the App
-- No installation required. This is a **portable** single-file executable.
-- Simply double-click `SimpleIPScanner.exe` to start.
-- *Note: On first run, Windows SmartScreen may show a warning because the app is not code-signed. Click "More Info" → "Run anyway".*
+### 3. Automatic Updates
+Once installed, the app silently checks for new releases on startup. When an update is available, a banner appears at the top of the window — click **Update & Restart** to apply it in seconds. No manual downloads needed.
+
+> **Portable version**: A `SimpleIPScanner-win-Portable.zip` is also available on the Releases page for users who prefer a no-install option. Note that the portable version does not support automatic updates.
 
 ---
 
@@ -68,22 +64,37 @@ Compare the resulting hash with the one provided in `SHA256SUM.txt` on the Relea
 4. Build: `dotnet build` or build in Release mode in Visual Studio.
 
 ### Publishing a Release
-Run the included script to produce a self-contained single-file executable with SHA-256 hash:
+Requires the `vpk` CLI (one-time setup: `dotnet tool install -g vpk`).
+
 ```powershell
-.\publish_release.ps1
+.\publish_release.ps1 -Version "1.5.0" -GitHubToken "ghp_xxxx"
 ```
-Output goes to `bin\Release\Publish\`.
+
+This publishes a self-contained build, packages it with Velopack (`vpk pack`), and uploads the installer and update feed to GitHub Releases (`vpk upload github`). Output goes to `bin\Release\VelopackOutput\`.
 
 ### Technology Stack
 - **Language**: C# 12
 - **UI Framework**: WPF (Windows Presentation Foundation)
-- **Runtime**: .NET 8 (self-contained, no install required)
+- **Runtime**: .NET 8 (self-contained)
 - **Networking**: `System.Net.Sockets`, `System.Net.NetworkInformation`, `System.Net.Ping`
-- **No external NuGet packages**
+- **Auto-Update**: [Velopack](https://velopack.io) — installer packaging and GitHub Releases update feed
 
 ---
 
 ## 📋 Changelog
+
+### v1.4.1
+- Patch release — internal fixes and update pipeline verification
+
+### v1.4.0
+- **Auto-update** — app silently checks GitHub Releases on startup; an in-app banner lets you apply updates with one click (powered by Velopack)
+- **Installer distribution** — replaced portable single-file exe with `SimpleIPScanner-win-Setup.exe`; installs to `%LocalAppData%`, creates Start Menu shortcut, and handles future updates automatically
+- Portable zip still provided for no-install users
+
+### v1.3.0
+- **Custom DNS servers** — add your own DNS servers to the benchmark alongside the built-in providers
+- **Chart X-axis labels** — traceroute latency timeline now shows readable time markers on the X-axis
+- UI polish across multiple panels
 
 ### v1.2.0
 - **Multi-subnet / VLAN scanning** — add multiple CIDR ranges as chips; sequential scan merges results into one list with a Subnet column

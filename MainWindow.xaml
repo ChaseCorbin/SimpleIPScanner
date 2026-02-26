@@ -10,6 +10,7 @@
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
@@ -102,8 +103,49 @@
             </Grid>
         </Border>
 
+        <!-- UPDATE BANNER — hidden until an update is available -->
+        <Border x:Name="UpdateBanner"
+                Grid.Row="1"
+                Visibility="Collapsed"
+                Padding="20,10"
+                Background="#1C2B22"
+                BorderBrush="{StaticResource AccentCyanBrush}"
+                BorderThickness="0,0,0,1">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <Ellipse Grid.Column="0" Width="8" Height="8"
+                         Fill="{StaticResource AccentCyanBrush}"
+                         VerticalAlignment="Center" Margin="0,0,10,0"/>
+                <TextBlock x:Name="UpdateBannerText"
+                           Grid.Column="1"
+                           Text="A new version is available"
+                           FontSize="13" FontFamily="Segoe UI"
+                           Foreground="{StaticResource TextPrimaryBrush}"
+                           VerticalAlignment="Center"/>
+                <Button x:Name="UpdateNowButton"
+                        Grid.Column="2"
+                        Content="Update &amp; Restart"
+                        Style="{StaticResource ScanButton}"
+                        FontSize="12" Padding="16,6" Margin="12,0,8,0"
+                        VerticalAlignment="Center"
+                        Click="UpdateNowButton_Click"/>
+                <Button x:Name="DismissUpdateButton"
+                        Grid.Column="3"
+                        Content="Dismiss"
+                        Style="{StaticResource GhostButton}"
+                        FontSize="12" Padding="12,6"
+                        VerticalAlignment="Center"
+                        Click="DismissUpdateButton_Click"/>
+            </Grid>
+        </Border>
+
         <!-- MAIN CONTENT TAB CONTROL -->
-        <TabControl Grid.Row="1" Margin="0,10,0,0">
+        <TabControl Grid.Row="2" Margin="0,10,0,0">
             <!-- TAB 1: NETWORK SCANNER -->
             <TabItem Header="Network Scanner">
                 <Grid>
@@ -782,7 +824,7 @@
         </TabControl>
 
         <!-- STATUS BAR -->
-        <Border Grid.Row="2" Padding="24,10" Background="{StaticResource SecondaryDarkBrush}"
+        <Border Grid.Row="3" Padding="24,10" Background="{StaticResource SecondaryDarkBrush}"
                 BorderBrush="{StaticResource BorderDarkBrush}" BorderThickness="0,1,0,0">
             <Grid>
                 <TextBlock x:Name="StatusText" Text="Ready"

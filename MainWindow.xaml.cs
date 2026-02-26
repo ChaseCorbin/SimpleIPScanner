@@ -41,6 +41,7 @@ namespace SimpleIPScanner
         private CancellationTokenSource? _dnsCts;
         private bool _isScanning;
         private bool _isDnsBenchmarking;
+        private readonly UpdateService _updateService = new();
 
         // Cached brushes for the chart tooltip hot path (avoids FindResource on every mouse-move)
         private Brush? _tooltipRedBrush;
@@ -86,6 +87,9 @@ namespace SimpleIPScanner
                 }
             };
             timer.Start();
+
+            // Fire-and-forget: silently check for a newer release in the background.
+            _ = CheckForUpdateAsync();
         }
 
         /// <summary>
@@ -711,6 +715,37 @@ namespace SimpleIPScanner
             }
             session.IsActive = false;
             session.Status = "Stopped";
+        }
+
+        #endregion
+
+        #region Update
+
+        private async Task CheckForUpdateAsync()
+        {
+            string? newVersion = await _updateService.CheckForUpdateAsync();
+            if (newVersion == null) return;
+
+            Dispatcher.Invoke(() =>
+            {
+                UpdateBannerText.Text = $"Version {newVersion} is available — update now for the latest features.";
+                UpdateBanner.Visibility = Visibility.Visible;
+            });
+        }
+
+        private async void UpdateNowButton_Click(object sender, RoutedEventArgs e)
+        {
+            UpdateNowButton.IsEnabled = false;
+            UpdateNowButton.Content = "Downloading…";
+            await _updateService.ApplyUpdateAndRestartAsync();
+            // Only reached if the download/apply failed — restore the button.
+            UpdateNowButton.Content = "Update & Restart";
+            UpdateNowButton.IsEnabled = true;
+        }
+
+        private void DismissUpdateButton_Click(object sender, RoutedEventArgs e)
+        {
+            UpdateBanner.Visibility = Visibility.Collapsed;
         }
 
         #endregion
