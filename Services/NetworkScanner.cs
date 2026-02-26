@@ -84,7 +84,8 @@ namespace SimpleIPScanner.Services
         private static long ComputeHostCount(int prefix)
         {
             if (prefix is < 0 or > 32) return 0;
-            if (prefix >= 31) return 0;
+            if (prefix == 32) return 1;  // Single host route
+            if (prefix == 31) return 2;  // Point-to-point link (RFC 3021)
             return (1L << (32 - prefix)) - 2;
         }
 
@@ -273,9 +274,24 @@ namespace SimpleIPScanner.Services
         {
             uint mask = prefix == 0 ? 0 : uint.MaxValue << (32 - prefix);
             uint networkAddress = network & mask;
-            uint broadcast = networkAddress | ~mask;
-            for (uint i = networkAddress + 1; i < broadcast; i++)
-                yield return UIntToIP(i);
+
+            if (prefix == 32)
+            {
+                // Single host — yield just this address
+                yield return UIntToIP(networkAddress);
+            }
+            else if (prefix == 31)
+            {
+                // Point-to-point: both addresses are usable (RFC 3021)
+                yield return UIntToIP(networkAddress);
+                yield return UIntToIP(networkAddress + 1);
+            }
+            else
+            {
+                uint broadcast = networkAddress | ~mask;
+                for (uint i = networkAddress + 1; i < broadcast; i++)
+                    yield return UIntToIP(i);
+            }
         }
 
         public static string GetActiveSubnet()

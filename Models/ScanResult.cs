@@ -24,14 +24,25 @@ namespace SimpleIPScanner.Models
         public string IP
         {
             get => _ip;
-            set { _ip = value; _sortKey = null; OnPropertyChanged(); }
+            set { _ip = value; _sortKey = null; OnPropertyChanged(); OnPropertyChanged(nameof(IPDisplay)); }
         }
 
         /// <summary>The source subnet CIDR this device was discovered in, e.g. "192.168.1.0/24".</summary>
         public string Subnet
         {
             get => _subnet;
-            set { _subnet = value; OnPropertyChanged(); }
+            set { _subnet = value; OnPropertyChanged(); OnPropertyChanged(nameof(IPDisplay)); }
+        }
+
+        /// <summary>IP address with the subnet prefix appended, e.g. "192.168.0.25/24".</summary>
+        public string IPDisplay
+        {
+            get
+            {
+                if (string.IsNullOrEmpty(_subnet)) return _ip;
+                int slash = _subnet.IndexOf('/');
+                return slash >= 0 ? $"{_ip}{_subnet.Substring(slash)}" : _ip;
+            }
         }
 
         public string Hostname

@@ -48,6 +48,11 @@ namespace SimpleIPScanner
         private Brush? _tooltipOrangeBrush;
         private Brush? _tooltipGreenBrush;
 
+        // Chart pan / drag state
+        private bool _isDragging;
+        private Point _dragStartPoint;
+        private DateTime _dragStartViewEnd;
+
         public MainWindow()
         {
             InitializeComponent();
@@ -663,35 +668,75 @@ namespace SimpleIPScanner
             }
         }
 
+        private void ChartContainer_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            if (TraceDetailArea.DataContext is not TraceSession session) return;
+            _isDragging = true;
+            _dragStartPoint = e.GetPosition(ChartContainer);
+            _dragStartViewEnd = session.ViewEnd;
+            ChartContainer.CaptureMouse();
+            ChartContainer.Cursor = Cursors.SizeWE;
+        }
+
+        private void ChartContainer_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            _isDragging = false;
+            ChartContainer.ReleaseMouseCapture();
+            ChartContainer.Cursor = Cursors.Cross;
+        }
+
         private void ChartContainer_MouseMove(object sender, MouseEventArgs e)
         {
             if (TooltipLine == null || TooltipPopup == null || TraceDetailArea == null || ChartContainer == null) return;
-            if (TraceDetailArea.DataContext is not TraceSession session || !session.FilteredHistory.Any()) return;
-
-            var history = session.FilteredHistory;
+            if (TraceDetailArea.DataContext is not TraceSession session) return;
 
             Point mousePos = e.GetPosition(ChartContainer);
+
+            // Handle drag-to-pan
+            if (_isDragging)
+            {
+                double deltaX = mousePos.X - _dragStartPoint.X;
+                double chartWidth = ChartContainer.ActualWidth;
+                if (chartWidth > 0)
+                {
+                    double windowSeconds = session.ChartIntervalMinutes * 60.0;
+                    double deltaSeconds = -(deltaX / chartWidth) * windowSeconds;
+                    session.PanTo(_dragStartViewEnd + TimeSpan.FromSeconds(deltaSeconds));
+                }
+                // Hide tooltip while dragging
+                TooltipLine.Visibility = Visibility.Collapsed;
+                TooltipPopup.Visibility = Visibility.Collapsed;
+                return;
+            }
+
+            if (!session.FilteredHistory.Any()) return;
+
+            // Map mouse X → nearest time → nearest data point (time-relative lookup)
             double xRatio = mousePos.X / ChartContainer.ActualWidth;
-            int index = (int)Math.Round(xRatio * (history.Count - 1));
-            index = Math.Max(0, Math.Min(history.Count - 1, index));
+            double totalWindowSeconds = session.ChartIntervalMinutes * 60.0;
+            DateTime mouseTime = session.ViewStart + TimeSpan.FromSeconds(xRatio * totalWindowSeconds);
 
-            var point = history[index];
+            var nearest = session.FilteredHistory
+                .OrderBy(p => Math.Abs((p.Timestamp - mouseTime).TotalSeconds))
+                .First();
 
-            double xPos = (double)index / (history.Count > 1 ? history.Count - 1 : 1) * ChartContainer.ActualWidth;
+            double xPos = (nearest.Timestamp - session.ViewStart).TotalSeconds / totalWindowSeconds * ChartContainer.ActualWidth;
+            xPos = Math.Max(0, Math.Min(ChartContainer.ActualWidth, xPos));
+
             TooltipLine.X1 = TooltipLine.X2 = xPos;
             TooltipLine.Visibility = Visibility.Visible;
 
             TooltipPopup.Visibility = Visibility.Visible;
-            TooltipTime.Text = point.Timestamp.ToString("HH:mm:ss");
-            TooltipLatency.Text = point.Latency < 0 ? "Timeout" : $"{point.Latency:F0} ms";
+            TooltipTime.Text = nearest.Timestamp.ToString("HH:mm:ss");
+            TooltipLatency.Text = nearest.Latency < 0 ? "Timeout" : $"{nearest.Latency:F0} ms";
 
             _tooltipRedBrush    ??= FindResource("ErrorRedBrush") as Brush;
             _tooltipOrangeBrush ??= FindResource("WarningOrangeBrush") as Brush;
             _tooltipGreenBrush  ??= FindResource("OnlineGreenBrush") as Brush;
 
-            if (point.Latency < 0 || point.Latency >= 200) TooltipLatency.Foreground = _tooltipRedBrush;
-            else if (point.Latency >= 100)                  TooltipLatency.Foreground = _tooltipOrangeBrush;
-            else                                            TooltipLatency.Foreground = _tooltipGreenBrush;
+            if (nearest.Latency < 0 || nearest.Latency >= 200) TooltipLatency.Foreground = _tooltipRedBrush;
+            else if (nearest.Latency >= 100)                    TooltipLatency.Foreground = _tooltipOrangeBrush;
+            else                                                TooltipLatency.Foreground = _tooltipGreenBrush;
 
             Canvas.SetLeft(TooltipPopup, xPos + 10);
             Canvas.SetTop(TooltipPopup, Math.Min(mousePos.Y, ChartContainer.ActualHeight - 50));
@@ -702,8 +747,17 @@ namespace SimpleIPScanner
 
         private void ChartContainer_MouseLeave(object sender, MouseEventArgs e)
         {
+            _isDragging = false;
+            ChartContainer.ReleaseMouseCapture();
+            ChartContainer.Cursor = Cursors.Cross;
             TooltipLine.Visibility = Visibility.Collapsed;
             TooltipPopup.Visibility = Visibility.Collapsed;
+        }
+
+        private void BackToLiveBtn_Click(object sender, RoutedEventArgs e)
+        {
+            if (TraceDetailArea.DataContext is TraceSession session)
+                session.ResetToLive();
         }
 
         private void StopTrace(TraceSession session)
@@ -715,6 +769,51 @@ namespace SimpleIPScanner
             }
             session.IsActive = false;
             session.Status = "Stopped";
+        }
+
+        #endregion
+
+        #region Remote Tools
+
+        private void ResultsGrid_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            // Select the clicked row; suppress the context menu when clicking empty space
+            var row = FindVisualParent<DataGridRow>(e.OriginalSource as DependencyObject);
+            if (row == null) { e.Handled = true; return; }
+            row.IsSelected = true;
+        }
+
+        private void RdpMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            if (ResultsGrid.SelectedItem is not ScanResult result) return;
+            Process.Start("mstsc.exe", $"/v:{GetConnectionTarget(result)}");
+        }
+
+        private void PsRemoteMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            if (ResultsGrid.SelectedItem is not ScanResult result) return;
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = "powershell.exe",
+                Arguments = $"-NoExit -Command \"Enter-PSSession -ComputerName '{GetConnectionTarget(result)}'\"",
+                UseShellExecute = true
+            });
+        }
+
+        // Prefer hostname; fall back to IP if hostname is missing or "N/A"
+        private static string GetConnectionTarget(ScanResult result) =>
+            !string.IsNullOrWhiteSpace(result.Hostname) && result.Hostname != "N/A"
+                ? result.Hostname
+                : result.IP;
+
+        private static T? FindVisualParent<T>(DependencyObject? child) where T : DependencyObject
+        {
+            while (child != null)
+            {
+                if (child is T match) return match;
+                child = VisualTreeHelper.GetParent(child);
+            }
+            return null;
         }
 
         #endregion

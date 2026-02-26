@@ -7,7 +7,7 @@
 
 A modern, high-performance WPF application for network discovery, DNS performance testing, and visual traceroute monitoring.
 
-![Version](https://img.shields.io/badge/Version-1.4.1-10B981)
+![Version](https://img.shields.io/badge/Version-1.4.2-10B981)
 ![Platform](https://img.shields.io/badge/Platform-Windows-0078d4)
 ![Framework](https://img.shields.io/badge/Framework-.NET%208-512bd4)
 
@@ -33,7 +33,8 @@ Once installed, the app silently checks for new releases on startup. When an upd
 ## ✨ Features
 
 ### ⚡ Network Scanner
-- **Multi-Subnet Scanning**: Add multiple CIDR ranges as chips and scan them all in one session. Results are merged into a single list with a Subnet column.
+- **Multi-Subnet Scanning**: Add multiple CIDR ranges as chips and scan them all in one session. Results are merged into a single list; each IP shows its subnet prefix inline (e.g. `192.168.0.25/24`).
+- **Flexible CIDR Support**: Scan any range from /24 down to /32 — including single-host (/32) and point-to-point (/31) targets.
 - **Auto-Detect Subnets**: Automatically discovers all connected subnets from your active network interfaces.
 - **Fast Discovery**: Concurrent async pinging with semaphore throttling (up to 50 simultaneous probes).
 - **OS Fingerprinting**: Detects Windows, Apple, and Linux devices via TTL heuristics.
@@ -82,6 +83,14 @@ This publishes a self-contained build, packages it with Velopack (`vpk pack`), a
 ---
 
 ## 📋 Changelog
+
+### v1.4.2
+- **Right-click remote tools** — right-click any scanned device to launch **Remote Desktop (RDP)** or open a **PowerShell remote session** (`Enter-PSSession`) directly from the results grid; uses hostname when available, falls back to IP
+- **IP column with CIDR prefix** — subnet is now shown inline as part of the IP (e.g. `192.168.0.25/24`), removing the redundant Subnet column
+- **Extended CIDR range** — scanner now accepts /24 through /32; /32 scans a single host, /31 scans both point-to-point addresses (RFC 3021)
+- **Traceroute chart pan** — click and drag the latency chart to scroll through historical data; "↩ Live" button snaps back to the live view
+- **Traceroute X-axis accuracy** — time labels now reflect the actual visible window instead of raw data timestamps
+- UI fixes: dark-themed right-click menu with no icon gutter and green accent hover
 
 ### v1.4.1
 - Patch release — internal fixes and update pipeline verification

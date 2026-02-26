@@ -265,7 +265,57 @@
                                       SelectionUnit="FullRow"
                                       Background="Transparent" BorderThickness="0"
                                       GridLinesVisibility="Horizontal"
-                                      HorizontalGridLinesBrush="{StaticResource BorderDarkBrush}">
+                                      HorizontalGridLinesBrush="{StaticResource BorderDarkBrush}"
+                                      PreviewMouseRightButtonDown="ResultsGrid_PreviewMouseRightButtonDown">
+
+                                <DataGrid.ContextMenu>
+                                    <ContextMenu Background="{StaticResource CardDarkBrush}"
+                                                 BorderBrush="{StaticResource BorderDarkBrush}"
+                                                 BorderThickness="1">
+                                        <!-- Override default WPF ContextMenu chrome (removes white outer border/shadow area) -->
+                                        <ContextMenu.Template>
+                                            <ControlTemplate TargetType="ContextMenu">
+                                                <Border Background="{TemplateBinding Background}"
+                                                        BorderBrush="{TemplateBinding BorderBrush}"
+                                                        BorderThickness="{TemplateBinding BorderThickness}"
+                                                        Padding="3,3">
+                                                    <StackPanel IsItemsHost="True"/>
+                                                </Border>
+                                            </ControlTemplate>
+                                        </ContextMenu.Template>
+                                        <ContextMenu.Resources>
+                                            <Style TargetType="MenuItem">
+                                                <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+                                                <Setter Property="Background" Value="Transparent"/>
+                                                <Setter Property="Padding" Value="14,7"/>
+                                                <Setter Property="FontSize" Value="13"/>
+                                                <Setter Property="FontFamily" Value="Segoe UI"/>
+                                                <!-- Custom template removes the default icon gutter -->
+                                                <Setter Property="Template">
+                                                    <Setter.Value>
+                                                        <ControlTemplate TargetType="MenuItem">
+                                                            <Border x:Name="Bd"
+                                                                    Background="{TemplateBinding Background}"
+                                                                    Padding="{TemplateBinding Padding}">
+                                                                <ContentPresenter ContentSource="Header"
+                                                                                  RecognizesAccessKey="True"/>
+                                                            </Border>
+                                                            <ControlTemplate.Triggers>
+                                                                <Trigger Property="IsHighlighted" Value="True">
+                                                                    <Setter TargetName="Bd" Property="Background" Value="Transparent"/>
+                                                                    <Setter Property="Foreground" Value="{StaticResource AccentCyanBrush}"/>
+                                                                </Trigger>
+                                                            </ControlTemplate.Triggers>
+                                                        </ControlTemplate>
+                                                    </Setter.Value>
+                                                </Setter>
+                                            </Style>
+                                        </ContextMenu.Resources>
+                                        <MenuItem Header="🖥  Remote Desktop (RDP)"     Click="RdpMenuItem_Click"/>
+                                        <MenuItem Header="⚡  PowerShell Remote Session" Click="PsRemoteMenuItem_Click"/>
+                                    </ContextMenu>
+                                </DataGrid.ContextMenu>
+
                                 <DataGrid.Columns>
                                 <DataGridTemplateColumn Header="" Width="50">
                                     <DataGridTemplateColumn.CellTemplate>
@@ -339,9 +389,7 @@
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>
 
-                                <DataGridTextColumn Header="IP Address" Binding="{Binding IP}" Width="130" SortMemberPath="SortKey"/>
-                                <DataGridTextColumn Header="Subnet" Binding="{Binding Subnet}" Width="130"
-                                                    Foreground="{StaticResource TextSecondaryBrush}"/>
+                                <DataGridTextColumn Header="IP Address" Binding="{Binding IPDisplay}" Width="150" SortMemberPath="SortKey"/>
                                 <DataGridTextColumn Header="Hostname" Binding="{Binding Hostname}" Width="*"/>
                                 <DataGridTextColumn Header="MAC Address" Binding="{Binding MAC}" Width="150"/>
                                 <DataGridTextColumn Header="Vendor" Binding="{Binding Vendor}" Width="120" Foreground="{StaticResource AccentCyanBrush}"/>
@@ -710,6 +758,21 @@
                                              </Style>
                                          </ToggleButton.Style>
                                      </ToggleButton>
+
+                                    <!-- Back to Live button — only visible when chart is panned -->
+                                    <Button x:Name="BackToLiveBtn"
+                                            Content="↩ Live"
+                                            Padding="12,4" Margin="8,0,0,0"
+                                            Cursor="Hand"
+                                            Click="BackToLiveBtn_Click"
+                                            Visibility="{Binding IsLive, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
+                                        <Button.Style>
+                                            <Style TargetType="Button" BasedOn="{StaticResource GhostButton}">
+                                                <Setter Property="Foreground" Value="{StaticResource AccentCyanBrush}"/>
+                                                <Setter Property="BorderBrush" Value="{StaticResource AccentCyanBrush}"/>
+                                            </Style>
+                                        </Button.Style>
+                                    </Button>
                                 </StackPanel>
                                 
                                 <Grid Grid.Row="1">
@@ -735,7 +798,10 @@
 
                                     <!-- Chart Area -->
                                     <Border Grid.Column="1" Grid.Row="0" BorderBrush="{StaticResource BorderDarkBrush}" BorderThickness="1,0,0,1">
-                                        <Grid x:Name="ChartContainer" ClipToBounds="True" Background="Transparent" MouseMove="ChartContainer_MouseMove" MouseLeave="ChartContainer_MouseLeave">
+                                        <Grid x:Name="ChartContainer" ClipToBounds="True" Background="Transparent" Cursor="Cross"
+                                              MouseMove="ChartContainer_MouseMove" MouseLeave="ChartContainer_MouseLeave"
+                                              MouseLeftButtonDown="ChartContainer_MouseLeftButtonDown"
+                                              MouseLeftButtonUp="ChartContainer_MouseLeftButtonUp">
                                             <!-- Background Grid Lines -->
                                             <Border BorderBrush="{StaticResource BorderDarkBrush}" BorderThickness="0,1,0,0" Height="1" VerticalAlignment="Center" Opacity="0.3"/>
 
@@ -792,6 +858,8 @@
                                                         <Binding Path="ActualWidth" ElementName="ChartContainer"/>
                                                         <Binding Path="ActualHeight" ElementName="ChartContainer"/>
                                                         <Binding Path="MaxLatencyValue"/>
+                                                        <Binding Path="ViewStart"/>
+                                                        <Binding Path="ViewEnd"/>
                                                     </MultiBinding>
                                                 </Polyline.Points>
                                             </Polyline>

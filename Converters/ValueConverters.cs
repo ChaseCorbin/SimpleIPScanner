@@ -40,20 +40,31 @@ namespace SimpleIPScanner.Converters
             double maxVal = 100;
             if (values.Length > 3 && values[3] is double m) maxVal = m;
 
+            // Time-relative X positioning when ViewStart/ViewEnd are provided
+            bool timeRelative = values.Length > 5
+                && values[4] is DateTime viewStart && values[5] is DateTime viewEnd
+                && (viewEnd - viewStart).TotalSeconds > 0;
+
+            double windowSeconds = timeRelative ? ((DateTime)values[5] - (DateTime)values[4]).TotalSeconds : 0;
+            DateTime vs = timeRelative ? (DateTime)values[4] : DateTime.MinValue;
+
             var points = new PointCollection();
             double xStep = (history.Count > 1) ? width / (history.Count - 1) : width;
 
             for (int i = 0; i < history.Count; i++)
             {
                 double val = history[i].Latency;
-                double x = i * xStep;
-                
+
+                double x = timeRelative
+                    ? (history[i].Timestamp - vs).TotalSeconds / windowSeconds * width
+                    : i * xStep;
+
                 // If timeout (-1), draw at top (packet loss indicator)
                 double y = val < 0 ? 0 : height - (val / maxVal * height);
-                
-                // Clamp Y to prevent drawing outside bounds
+
+                // Clamp to prevent drawing outside bounds
                 y = Math.Max(0, Math.Min(height, y));
-                
+
                 points.Add(new Point(x, y));
             }
 
