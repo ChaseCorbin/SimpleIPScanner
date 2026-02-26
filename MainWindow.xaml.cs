@@ -4,6 +4,8 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
+using System.Net;
+using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -42,6 +44,7 @@ namespace SimpleIPScanner
         private bool _isScanning;
         private bool _isDnsBenchmarking;
         private readonly UpdateService _updateService = new();
+        private readonly AppSettings _settings = AppSettings.Load();
 
         // Cached brushes for the chart tooltip hot path (avoids FindResource on every mouse-move)
         private Brush? _tooltipRedBrush;
@@ -94,7 +97,8 @@ namespace SimpleIPScanner
             timer.Start();
 
             // Fire-and-forget: silently check for a newer release in the background.
-            _ = CheckForUpdateAsync();
+            if (_settings.AutoCheckUpdates)
+                _ = CheckForUpdateAsync();
         }
 
         /// <summary>
@@ -783,6 +787,68 @@ namespace SimpleIPScanner
             row.IsSelected = true;
         }
 
+        private void BrowseMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            if (ResultsGrid.SelectedItem is not ScanResult result) return;
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = $"http://{result.IP}",
+                UseShellExecute = true
+            });
+        }
+
+        private void WolMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            if (ResultsGrid.SelectedItem is not ScanResult result) return;
+
+            if (string.IsNullOrEmpty(result.MAC) || result.MAC == "N/A")
+            {
+                MessageBox.Show(
+                    "No MAC address is available for this device.\nWake-on-LAN requires a resolved MAC address.",
+                    "MAC Address Required", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            try
+            {
+                SendWakeOnLan(result.MAC);
+                MessageBox.Show(
+                    $"Magic packet sent to {result.MAC}.",
+                    "Wake-on-LAN", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to send WOL packet: {ex.Message}",
+                    "Wake-on-LAN Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        /// <summary>
+        /// Sends a Wake-on-LAN magic packet for the given MAC address.
+        /// Format: 6 × 0xFF followed by 16 repetitions of the 6-byte MAC.
+        /// Broadcast over UDP port 9.
+        /// </summary>
+        private static void SendWakeOnLan(string macAddress)
+        {
+            // Strip separators (supports both '-' and ':')
+            string hex = macAddress.Replace("-", "").Replace(":", "");
+            if (hex.Length != 12)
+                throw new ArgumentException($"Unexpected MAC format: {macAddress}");
+
+            byte[] mac = new byte[6];
+            for (int i = 0; i < 6; i++)
+                mac[i] = Convert.ToByte(hex.Substring(i * 2, 2), 16);
+
+            // Build 102-byte magic packet
+            byte[] packet = new byte[102];
+            for (int i = 0; i < 6; i++) packet[i] = 0xFF;
+            for (int i = 1; i <= 16; i++) Array.Copy(mac, 0, packet, i * 6, 6);
+
+            using var udp = new UdpClient();
+            udp.EnableBroadcast = true;
+            udp.Send(packet, packet.Length, new IPEndPoint(IPAddress.Broadcast, 9));
+        }
+
         private void RdpMenuItem_Click(object sender, RoutedEventArgs e)
         {
             if (ResultsGrid.SelectedItem is not ScanResult result) return;
@@ -845,6 +911,15 @@ namespace SimpleIPScanner
         private void DismissUpdateButton_Click(object sender, RoutedEventArgs e)
         {
             UpdateBanner.Visibility = Visibility.Collapsed;
+        }
+
+        #endregion
+
+        #region Settings
+
+        private void SettingsButton_Click(object sender, RoutedEventArgs e)
+        {
+            new SettingsWindow(_settings, _updateService) { Owner = this }.ShowDialog();
         }
 
         #endregion

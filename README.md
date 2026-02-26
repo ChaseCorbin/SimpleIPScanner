@@ -7,7 +7,7 @@
 
 A modern, high-performance WPF application for network discovery, DNS performance testing, and visual traceroute monitoring.
 
-![Version](https://img.shields.io/badge/Version-1.4.2-10B981)
+![Version](https://img.shields.io/badge/Version-1.5.0-10B981)
 ![Platform](https://img.shields.io/badge/Platform-Windows-0078d4)
 ![Framework](https://img.shields.io/badge/Framework-.NET%208-512bd4)
 
@@ -41,6 +41,7 @@ Once installed, the app silently checks for new releases on startup. When an upd
 - **Vendor Detection**: Identifies device manufacturers from MAC OUI (IEEE database).
 - **Hostname Resolution**: Two-step fallback — standard DNS PTR lookup, then NetBIOS Node Status (UDP 137) for Windows machines not registered in DNS.
 - **Automatic Port Scanning**: Identifies common open ports (HTTP, HTTPS, SSH, RDP, SMB, etc.).
+- **Right-Click Device Tools**: Right-click any scanned device to instantly **Open in Browser**, send a **Wake-on-LAN** magic packet, launch **Remote Desktop (RDP)**, or open a **PowerShell Remote Session** (`Enter-PSSession`).
 
 ### 🚀 DNS Benchmark
 - **Live Latency Testing**: Compare cached and uncached response times across major DNS providers (Google, Cloudflare, OpenDNS, Quad9, and more).
@@ -50,9 +51,14 @@ Once installed, the app silently checks for new releases on startup. When an upd
 
 ### 🗺️ Visual Traceroute
 - **Live Hop-by-Hop Monitoring**: Continuous traceroute to one or more targets simultaneously.
-- **Performance Timeline**: Interactive latency chart with 1m / 5m / 10m / 1h / 2h / 8h zoom windows.
+- **Performance Timeline**: Interactive latency chart with 1m / 5m / 10m / 1h / 2h / 8h zoom windows and click-drag panning through history.
 - **Multi-Target**: Add any number of hosts and monitor them in parallel.
 - **Packet Loss & Jitter**: Track packet loss percentage and average latency per session.
+
+### ⚙️ Settings
+- **About**: View the current app version and open the GitHub repository.
+- **Auto-Update Toggle**: Enable or disable the startup update check. Manual "Check Now" always available regardless of the setting.
+- Settings persist across sessions in `%AppData%\SimpleIPScanner\settings.json`.
 
 ---
 
@@ -83,6 +89,12 @@ This publishes a self-contained build, packages it with Velopack (`vpk pack`), a
 ---
 
 ## 📋 Changelog
+
+### v1.5.0
+- **Settings menu** — new ⚙ gear button in the header opens a settings dialog with an About section (version, GitHub link) and an Updates section (toggle auto-check on startup, manual "Check Now" button); preferences saved to `%AppData%\SimpleIPScanner\settings.json`
+- **Wake-on-LAN** — right-click any scanned device and send a WOL magic packet directly to its MAC address to remotely power it on
+- **Open in Browser** — right-click any device to open `http://<ip>` in the default browser (useful for printers, routers, cameras, and other web-accessible devices)
+- **App icon** — custom switch-stack icon now appears in the taskbar, Alt+Tab, Start Menu, and window title bar; embedded as a multi-resolution `.ico` (16 / 32 / 48 / 64 / 256 px)
 
 ### v1.4.2
 - **Right-click remote tools** — right-click any scanned device to launch **Remote Desktop (RDP)** or open a **PowerShell remote session** (`Enter-PSSession`) directly from the results grid; uses hostname when available, falls back to IP
