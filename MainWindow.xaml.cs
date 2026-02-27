@@ -779,12 +779,20 @@ namespace SimpleIPScanner
 
         #region Remote Tools
 
+        // True when the most-recent right-click landed on a data row (not empty space)
+        private bool _rightClickedOnRow;
+
         private void ResultsGrid_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
         {
-            // Select the clicked row; suppress the context menu when clicking empty space
             var row = FindVisualParent<DataGridRow>(e.OriginalSource as DependencyObject);
-            if (row == null) { e.Handled = true; return; }
-            row.IsSelected = true;
+            _rightClickedOnRow = row != null;
+            if (row != null) row.IsSelected = true;
+        }
+
+        private void ResultsGrid_ContextMenuOpening(object sender, ContextMenuEventArgs e)
+        {
+            // Suppress the menu when right-clicking on empty space below the last row
+            if (!_rightClickedOnRow) e.Handled = true;
         }
 
         private void BrowseMenuItem_Click(object sender, RoutedEventArgs e)

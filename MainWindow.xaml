@@ -279,7 +279,8 @@
                                       Background="Transparent" BorderThickness="0"
                                       GridLinesVisibility="Horizontal"
                                       HorizontalGridLinesBrush="{StaticResource BorderDarkBrush}"
-                                      PreviewMouseRightButtonDown="ResultsGrid_PreviewMouseRightButtonDown">
+                                      PreviewMouseRightButtonDown="ResultsGrid_PreviewMouseRightButtonDown"
+                                      ContextMenuOpening="ResultsGrid_ContextMenuOpening">
 
                                 <DataGrid.ContextMenu>
                                     <ContextMenu Background="{StaticResource CardDarkBrush}"
@@ -404,12 +405,102 @@
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>
 
-                                <DataGridTextColumn Header="IP Address" Binding="{Binding IPDisplay}" Width="150" SortMemberPath="SortKey"/>
-                                <DataGridTextColumn Header="Hostname" Binding="{Binding Hostname}" Width="*"/>
-                                <DataGridTextColumn Header="MAC Address" Binding="{Binding MAC}" Width="150"/>
-                                <DataGridTextColumn Header="Vendor" Binding="{Binding Vendor}" Width="120" Foreground="{StaticResource AccentCyanBrush}"/>
-                                <DataGridTextColumn Header="Open Ports" Binding="{Binding OpenPorts}" Width="200" Foreground="{StaticResource AccentCyanBrush}"/>
-                                <DataGridTextColumn Header="Ping" Binding="{Binding PingDisplay}" Width="70"/>
+                                <DataGridTemplateColumn Header="IP Address" Width="150" SortMemberPath="SortKey">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBox Text="{Binding IPDisplay, Mode=OneWay}"
+                                                     IsReadOnly="True" IsTabStop="False"
+                                                     FocusVisualStyle="{x:Null}"
+                                                     Background="Transparent" BorderThickness="0"
+                                                     Foreground="{StaticResource TextPrimaryBrush}"
+                                                     FontFamily="Segoe UI" FontSize="13"
+                                                     Padding="0" VerticalAlignment="Center"
+                                                     CaretBrush="{StaticResource AccentCyanBrush}"
+                                                     SelectionBrush="{StaticResource AccentCyanDarkBrush}"
+                                                     Cursor="IBeam"/>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTemplateColumn Header="Hostname" Width="*">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBox Text="{Binding Hostname, Mode=OneWay}"
+                                                     IsReadOnly="True" IsTabStop="False"
+                                                     FocusVisualStyle="{x:Null}"
+                                                     Background="Transparent" BorderThickness="0"
+                                                     Foreground="{StaticResource TextPrimaryBrush}"
+                                                     FontFamily="Segoe UI" FontSize="13"
+                                                     Padding="0" VerticalAlignment="Center"
+                                                     CaretBrush="{StaticResource AccentCyanBrush}"
+                                                     SelectionBrush="{StaticResource AccentCyanDarkBrush}"
+                                                     Cursor="IBeam"/>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTemplateColumn Header="MAC Address" Width="150">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBox Text="{Binding MAC, Mode=OneWay}"
+                                                     IsReadOnly="True" IsTabStop="False"
+                                                     FocusVisualStyle="{x:Null}"
+                                                     Background="Transparent" BorderThickness="0"
+                                                     Foreground="{StaticResource TextPrimaryBrush}"
+                                                     FontFamily="Segoe UI" FontSize="13"
+                                                     Padding="0" VerticalAlignment="Center"
+                                                     CaretBrush="{StaticResource AccentCyanBrush}"
+                                                     SelectionBrush="{StaticResource AccentCyanDarkBrush}"
+                                                     Cursor="IBeam"/>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTemplateColumn Header="Vendor" Width="120">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBox Text="{Binding Vendor, Mode=OneWay}"
+                                                     IsReadOnly="True" IsTabStop="False"
+                                                     FocusVisualStyle="{x:Null}"
+                                                     Background="Transparent" BorderThickness="0"
+                                                     Foreground="{StaticResource AccentCyanBrush}"
+                                                     FontFamily="Segoe UI" FontSize="13"
+                                                     Padding="0" VerticalAlignment="Center"
+                                                     CaretBrush="{StaticResource AccentCyanBrush}"
+                                                     SelectionBrush="{StaticResource AccentCyanDarkBrush}"
+                                                     Cursor="IBeam"/>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTemplateColumn Header="Open Ports" Width="200">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBox Text="{Binding OpenPorts, Mode=OneWay}"
+                                                     IsReadOnly="True" IsTabStop="False"
+                                                     FocusVisualStyle="{x:Null}"
+                                                     Background="Transparent" BorderThickness="0"
+                                                     Foreground="{StaticResource AccentCyanBrush}"
+                                                     FontFamily="Segoe UI" FontSize="13"
+                                                     Padding="0" VerticalAlignment="Center"
+                                                     CaretBrush="{StaticResource AccentCyanBrush}"
+                                                     SelectionBrush="{StaticResource AccentCyanDarkBrush}"
+                                                     Cursor="IBeam"/>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTemplateColumn Header="Ping" Width="70">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBox Text="{Binding PingDisplay, Mode=OneWay}"
+                                                     IsReadOnly="True" IsTabStop="False"
+                                                     FocusVisualStyle="{x:Null}"
+                                                     Background="Transparent" BorderThickness="0"
+                                                     Foreground="{StaticResource TextPrimaryBrush}"
+                                                     FontFamily="Segoe UI" FontSize="13"
+                                                     Padding="0" VerticalAlignment="Center"
+                                                     CaretBrush="{StaticResource AccentCyanBrush}"
+                                                     SelectionBrush="{StaticResource AccentCyanDarkBrush}"
+                                                     Cursor="IBeam"/>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
                             </DataGrid.Columns>
                         </DataGrid>
                     </Border>

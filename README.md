@@ -7,7 +7,7 @@
 
 A modern, high-performance WPF application for network discovery, DNS performance testing, and visual traceroute monitoring.
 
-![Version](https://img.shields.io/badge/Version-1.5.1-10B981)
+![Version](https://img.shields.io/badge/Version-1.5.2-10B981)
 ![Platform](https://img.shields.io/badge/Platform-Windows-0078d4)
 ![Framework](https://img.shields.io/badge/Framework-.NET%208-512bd4)
 
@@ -89,6 +89,12 @@ This publishes a self-contained build, packages it with Velopack (`vpk pack`), a
 ---
 
 ## 📋 Changelog
+
+### v1.5.2
+- **Right-click context menu** — right-clicking a device row now only opens the menu when an actual device is clicked; right-clicking empty space in the results grid no longer triggers the menu
+- **Row hover highlight** — device rows now highlight on mouse-over, making it clear which device is being targeted before right-clicking
+- **Selectable cell text** — all output columns (IP, Hostname, MAC, Vendor, Open Ports, Ping) now support text selection so values can be highlighted and copied directly from the grid
+- **Removed cell focus outline** — the dotted rectangle that appeared when clicking a cell has been removed for a cleaner look
 
 ### v1.5.1
 - **Scrollbar styling** — custom slim scrollbar replaces the Windows default; rounded thumb transitions from subtle gray → dark green → bright green on hover/drag to match the app accent color
