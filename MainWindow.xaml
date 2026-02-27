@@ -266,7 +266,7 @@
 
                     <!-- RESULTS DATAGRID -->
                     <Grid Grid.Row="2" Margin="24,0,24,24">
-                        <Border x:Name="GridMask" Background="White" CornerRadius="8"/>
+                        <Border x:Name="GridMask" Background="{StaticResource PrimaryDarkBrush}" CornerRadius="8"/>
                         <Border CornerRadius="8" Background="{StaticResource PrimaryDarkBrush}" 
                                 BorderBrush="{StaticResource BorderDarkBrush}" BorderThickness="1">
                             <Border.OpacityMask>
@@ -533,7 +533,7 @@
 
                     <!-- DNS RESULTS DATAGRID -->
                     <Grid Grid.Row="2" Margin="24,0,24,24">
-                        <Border x:Name="DnsGridMask" Background="White" CornerRadius="8"/>
+                        <Border x:Name="DnsGridMask" Background="{StaticResource PrimaryDarkBrush}" CornerRadius="8"/>
                         <Border CornerRadius="8" Background="{StaticResource PrimaryDarkBrush}" 
                                 BorderBrush="{StaticResource BorderDarkBrush}" BorderThickness="1">
                             <Border.OpacityMask>
@@ -711,7 +711,7 @@
                         <!-- Hop List -->
                         <Border Grid.Row="1" Margin="24,0,24,12" CornerRadius="8" Background="{StaticResource PrimaryDarkBrush}" BorderBrush="{StaticResource BorderDarkBrush}" BorderThickness="1" ClipToBounds="True">
                             <Grid>
-                                <Border x:Name="TraceGridMask" Background="White" CornerRadius="8"/>
+                                <Border x:Name="TraceGridMask" Background="{StaticResource PrimaryDarkBrush}" CornerRadius="8"/>
                                 <Border CornerRadius="8" Background="{StaticResource PrimaryDarkBrush}">
                                     <Border.OpacityMask>
                                         <VisualBrush Visual="{Binding ElementName=TraceGridMask}"/>

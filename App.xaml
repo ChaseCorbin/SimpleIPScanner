@@ -412,6 +412,35 @@
             <Setter Property="BorderThickness" Value="0,0,1,1"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="DataGridColumnHeader">
+                        <Grid>
+                            <Border x:Name="HeaderBorder"
+                                    Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                    Padding="{TemplateBinding Padding}">
+                                <ContentPresenter VerticalAlignment="Center"/>
+                            </Border>
+                            <!-- Invisible column-resize gripper -->
+                            <Thumb x:Name="PART_RightHeaderGripper"
+                                   HorizontalAlignment="Right" Width="8" Cursor="SizeWE">
+                                <Thumb.Template>
+                                    <ControlTemplate TargetType="Thumb">
+                                        <Border Background="Transparent"/>
+                                    </ControlTemplate>
+                                </Thumb.Template>
+                            </Thumb>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="HeaderBorder" Property="Background" Value="{StaticResource SecondaryDarkBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
 
         <Style TargetType="DataGridRow">
@@ -448,10 +477,102 @@
             </Style.Triggers>
         </Style>
 
-        <!-- ScrollBar styling for dark theme -->
+        <!-- ============================================ -->
+        <!-- SCROLLBAR STYLING                            -->
+        <!-- ============================================ -->
+
+        <!-- Invisible page-jump repeat buttons (replace the arrow buttons) -->
+        <Style x:Key="ScrollBarPageButton" TargetType="RepeatButton">
+            <Setter Property="OverridesDefaultStyle" Value="True"/>
+            <Setter Property="IsTabStop" Value="False"/>
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RepeatButton">
+                        <Border Background="Transparent"/>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Rounded thumb -->
+        <Style x:Key="ScrollBarThumb" TargetType="Thumb">
+            <Setter Property="OverridesDefaultStyle" Value="True"/>
+            <Setter Property="IsTabStop" Value="False"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Thumb">
+                        <Border x:Name="ThumbBorder"
+                                Background="{StaticResource BorderDarkBrush}"
+                                CornerRadius="4"/>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ThumbBorder" Property="Background" Value="{StaticResource AccentCyanDarkBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsDragging" Value="True">
+                                <Setter TargetName="ThumbBorder" Property="Background" Value="{StaticResource AccentCyanBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- ScrollBar: vertical (default) and horizontal (trigger) -->
         <Style TargetType="ScrollBar">
-            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="OverridesDefaultStyle" Value="True"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
             <Setter Property="Width" Value="8"/>
+            <Setter Property="MinWidth" Value="8"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ScrollBar">
+                        <Border Background="Transparent">
+                            <Track x:Name="PART_Track" IsDirectionReversed="True">
+                                <Track.DecreaseRepeatButton>
+                                    <RepeatButton Style="{StaticResource ScrollBarPageButton}"
+                                                  Command="ScrollBar.PageUpCommand"/>
+                                </Track.DecreaseRepeatButton>
+                                <Track.Thumb>
+                                    <Thumb Style="{StaticResource ScrollBarThumb}" Margin="1,2"/>
+                                </Track.Thumb>
+                                <Track.IncreaseRepeatButton>
+                                    <RepeatButton Style="{StaticResource ScrollBarPageButton}"
+                                                  Command="ScrollBar.PageDownCommand"/>
+                                </Track.IncreaseRepeatButton>
+                            </Track>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="Orientation" Value="Horizontal">
+                    <Setter Property="Width" Value="Auto"/>
+                    <Setter Property="Height" Value="8"/>
+                    <Setter Property="MinHeight" Value="8"/>
+                    <Setter Property="Template">
+                        <Setter.Value>
+                            <ControlTemplate TargetType="ScrollBar">
+                                <Border Background="Transparent">
+                                    <Track x:Name="PART_Track" IsDirectionReversed="False">
+                                        <Track.DecreaseRepeatButton>
+                                            <RepeatButton Style="{StaticResource ScrollBarPageButton}"
+                                                          Command="ScrollBar.PageLeftCommand"/>
+                                        </Track.DecreaseRepeatButton>
+                                        <Track.Thumb>
+                                            <Thumb Style="{StaticResource ScrollBarThumb}" Margin="2,1"/>
+                                        </Track.Thumb>
+                                        <Track.IncreaseRepeatButton>
+                                            <RepeatButton Style="{StaticResource ScrollBarPageButton}"
+                                                          Command="ScrollBar.PageRightCommand"/>
+                                        </Track.IncreaseRepeatButton>
+                                    </Track>
+                                </Border>
+                            </ControlTemplate>
+                        </Setter.Value>
+                    </Setter>
+                </Trigger>
+            </Style.Triggers>
         </Style>
 
         <!-- ============================================ -->
