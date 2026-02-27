@@ -7,7 +7,7 @@
 
 A modern, high-performance WPF application for network discovery, DNS performance testing, and visual traceroute monitoring.
 
-![Version](https://img.shields.io/badge/Version-1.5.0-10B981)
+![Version](https://img.shields.io/badge/Version-1.5.1-10B981)
 ![Platform](https://img.shields.io/badge/Platform-Windows-0078d4)
 ![Framework](https://img.shields.io/badge/Framework-.NET%208-512bd4)
 
@@ -89,6 +89,11 @@ This publishes a self-contained build, packages it with Velopack (`vpk pack`), a
 ---
 
 ## 📋 Changelog
+
+### v1.5.1
+- **Scrollbar styling** — custom slim scrollbar replaces the Windows default; rounded thumb transitions from subtle gray → dark green → bright green on hover/drag to match the app accent color
+- **Corner rendering fix** — resolved a white halo artifact at the rounded corners of all DataGrid panels (scanner, DNS, traceroute hops); corners now blend cleanly against the dark background
+- **Column header chrome** — replaced the default WPF Aero2 raised-header look with a flat dark template that matches the rest of the UI; column resizing remains fully functional
 
 ### v1.5.0
 - **Settings menu** — new ⚙ gear button in the header opens a settings dialog with an About section (version, GitHub link) and an Updates section (toggle auto-check on startup, manual "Check Now" button); preferences saved to `%AppData%\SimpleIPScanner\settings.json`
