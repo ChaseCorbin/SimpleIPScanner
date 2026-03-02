@@ -267,7 +267,7 @@
                     <!-- RESULTS DATAGRID -->
                     <Grid Grid.Row="2" Margin="24,0,24,24">
                         <Border x:Name="GridMask" Background="{StaticResource PrimaryDarkBrush}" CornerRadius="8"/>
-                        <Border CornerRadius="8" Background="{StaticResource PrimaryDarkBrush}" 
+                        <Border x:Name="ResultsContainer" CornerRadius="8" Background="{StaticResource PrimaryDarkBrush}"
                                 BorderBrush="{StaticResource BorderDarkBrush}" BorderThickness="1">
                             <Border.OpacityMask>
                                 <VisualBrush Visual="{Binding ElementName=GridMask}"/>
@@ -397,14 +397,6 @@
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>
 
-                                <DataGridTemplateColumn Header="OS" Width="50">
-                                    <DataGridTemplateColumn.CellTemplate>
-                                        <DataTemplate>
-                                            <Path Data="{Binding OSIcon}" Fill="{StaticResource TextSecondaryBrush}" Width="16" Height="16" Stretch="Uniform" HorizontalAlignment="Center" ToolTip="{Binding OSType}"/>
-                                        </DataTemplate>
-                                    </DataGridTemplateColumn.CellTemplate>
-                                </DataGridTemplateColumn>
-
                                 <DataGridTemplateColumn Header="IP Address" Width="150" SortMemberPath="SortKey">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
@@ -453,7 +445,7 @@
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>
-                                <DataGridTemplateColumn Header="Vendor" Width="120">
+                                <DataGridTemplateColumn Header="Vendor" Width="150">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
                                             <TextBox Text="{Binding Vendor, Mode=OneWay}"
@@ -469,41 +461,162 @@
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>
-                                <DataGridTemplateColumn Header="Open Ports" Width="200">
+                                <DataGridTemplateColumn Header="" Width="90">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
-                                            <TextBox Text="{Binding OpenPorts, Mode=OneWay}"
-                                                     IsReadOnly="True" IsTabStop="False"
-                                                     FocusVisualStyle="{x:Null}"
-                                                     Background="Transparent" BorderThickness="0"
-                                                     Foreground="{StaticResource AccentCyanBrush}"
-                                                     FontFamily="Segoe UI" FontSize="13"
-                                                     Padding="0" VerticalAlignment="Center"
-                                                     CaretBrush="{StaticResource AccentCyanBrush}"
-                                                     SelectionBrush="{StaticResource AccentCyanDarkBrush}"
-                                                     Cursor="IBeam"/>
-                                        </DataTemplate>
-                                    </DataGridTemplateColumn.CellTemplate>
-                                </DataGridTemplateColumn>
-                                <DataGridTemplateColumn Header="Ping" Width="70">
-                                    <DataGridTemplateColumn.CellTemplate>
-                                        <DataTemplate>
-                                            <TextBox Text="{Binding PingDisplay, Mode=OneWay}"
-                                                     IsReadOnly="True" IsTabStop="False"
-                                                     FocusVisualStyle="{x:Null}"
-                                                     Background="Transparent" BorderThickness="0"
-                                                     Foreground="{StaticResource TextPrimaryBrush}"
-                                                     FontFamily="Segoe UI" FontSize="13"
-                                                     Padding="0" VerticalAlignment="Center"
-                                                     CaretBrush="{StaticResource AccentCyanBrush}"
-                                                     SelectionBrush="{StaticResource AccentCyanDarkBrush}"
-                                                     Cursor="IBeam"/>
+                                            <Button Content="Details →" Tag="{Binding}"
+                                                    Click="DetailsButton_Click"
+                                                    Style="{StaticResource DetailsLinkButton}"
+                                                    ToolTip="View device details"/>
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>
                             </DataGrid.Columns>
                         </DataGrid>
                     </Border>
+
+                    <!-- DEVICE DETAIL PANEL -->
+                    <Border x:Name="DeviceDetailPanel" Visibility="Collapsed"
+                            CornerRadius="8" Background="{StaticResource PrimaryDarkBrush}"
+                            BorderBrush="{StaticResource BorderDarkBrush}" BorderThickness="1">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                            <StackPanel Margin="24,20,24,24">
+
+                                <!-- Top bar: Back + Re-scan -->
+                                <Grid Margin="0,0,0,20">
+                                    <Button Content="← Back to Results" HorizontalAlignment="Left"
+                                            Style="{StaticResource GhostButton}" Padding="12,6"
+                                            Click="BackButton_Click"/>
+                                    <Button x:Name="DetailRescanButton" Content="↺  Re-scan Device"
+                                            HorizontalAlignment="Right" Style="{StaticResource GhostButton}"
+                                            Padding="12,6" Click="DetailRescanButton_Click"/>
+                                </Grid>
+
+                                <!-- Device header: OS icon + hostname + status summary -->
+                                <StackPanel Margin="0,0,0,20">
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                        <Path x:Name="DetailOSIcon" Fill="{StaticResource TextSecondaryBrush}"
+                                              Width="20" Height="20" Stretch="Uniform"
+                                              VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                        <TextBlock x:Name="DetailHostname" FontSize="22" FontWeight="SemiBold"
+                                                   Foreground="{StaticResource TextPrimaryBrush}"
+                                                   VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                    <StackPanel Orientation="Horizontal">
+                                        <Ellipse x:Name="DetailStatusDot" Width="8" Height="8"
+                                                 VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                        <TextBlock x:Name="DetailStatusText" FontSize="13"
+                                                   Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center"/>
+                                        <TextBlock Text="  ·  " FontSize="13" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                        <TextBlock x:Name="DetailPingText" FontSize="13"
+                                                   Foreground="{StaticResource TextSecondaryBrush}"/>
+                                    </StackPanel>
+                                </StackPanel>
+
+                                <!-- Info cards row -->
+                                <Grid Margin="0,0,0,16">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="16"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <!-- Identity card -->
+                                    <Border Grid.Column="0" Background="{StaticResource CardDarkBrush}"
+                                            CornerRadius="8" Padding="16">
+                                        <StackPanel>
+                                            <TextBlock Text="NETWORK IDENTITY" FontSize="11" FontWeight="SemiBold"
+                                                       Foreground="{StaticResource AccentCyanBrush}"
+                                                       Margin="0,0,0,12"/>
+                                            <TextBlock Text="IP Address" FontSize="11"
+                                                       Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,2"/>
+                                            <TextBlock x:Name="DetailIP" FontSize="14"
+                                                       Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,12"/>
+                                            <TextBlock Text="Hostname" FontSize="11"
+                                                       Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,2"/>
+                                            <TextBlock x:Name="DetailHostnameFull" FontSize="14"
+                                                       Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,12"/>
+                                            <TextBlock Text="MAC Address" FontSize="11"
+                                                       Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,2"/>
+                                            <TextBlock x:Name="DetailMAC" FontSize="14"
+                                                       Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,12"/>
+                                            <TextBlock Text="Vendor" FontSize="11"
+                                                       Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,2"/>
+                                            <TextBlock x:Name="DetailVendor" FontSize="14"
+                                                       Foreground="{StaticResource AccentCyanBrush}"/>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <!-- Connectivity card -->
+                                    <Border Grid.Column="2" Background="{StaticResource CardDarkBrush}"
+                                            CornerRadius="8" Padding="16">
+                                        <StackPanel>
+                                            <TextBlock Text="CONNECTIVITY" FontSize="11" FontWeight="SemiBold"
+                                                       Foreground="{StaticResource AccentCyanBrush}"
+                                                       Margin="0,0,0,12"/>
+                                            <TextBlock Text="Status" FontSize="11"
+                                                       Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,2"/>
+                                            <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                                                <Ellipse x:Name="DetailStatusDot2" Width="8" Height="8"
+                                                         VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                                <TextBlock x:Name="DetailStatusText2" FontSize="14"
+                                                           Foreground="{StaticResource TextPrimaryBrush}"/>
+                                            </StackPanel>
+                                            <TextBlock Text="Round-Trip Ping" FontSize="11"
+                                                       Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,2"/>
+                                            <TextBlock x:Name="DetailPingFull" FontSize="14"
+                                                       Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,12"/>
+                                            <TextBlock Text="Operating System" FontSize="11"
+                                                       Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,2"/>
+                                            <TextBlock x:Name="DetailOS" FontSize="14"
+                                                       Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,12"/>
+                                            <TextBlock Text="Subnet" FontSize="11"
+                                                       Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,2"/>
+                                            <TextBlock x:Name="DetailSubnet" FontSize="14"
+                                                       Foreground="{StaticResource TextPrimaryBrush}"/>
+                                        </StackPanel>
+                                    </Border>
+                                </Grid>
+
+                                <!-- Open Ports card -->
+                                <Border Background="{StaticResource CardDarkBrush}"
+                                        CornerRadius="8" Padding="16" Margin="0,0,0,16">
+                                    <StackPanel>
+                                        <TextBlock x:Name="DetailPortsHeader" FontSize="11" FontWeight="SemiBold"
+                                                   Foreground="{StaticResource AccentCyanBrush}"
+                                                   Margin="0,0,0,12"/>
+                                        <WrapPanel x:Name="DetailPortsWrap"/>
+                                        <TextBlock x:Name="DetailNoPortsText" Text="No open ports detected"
+                                                   FontSize="13" Foreground="{StaticResource TextSecondaryBrush}"
+                                                   Visibility="Collapsed"/>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Quick Actions card -->
+                                <Border Background="{StaticResource CardDarkBrush}"
+                                        CornerRadius="8" Padding="16">
+                                    <StackPanel>
+                                        <TextBlock Text="QUICK ACTIONS" FontSize="11" FontWeight="SemiBold"
+                                                   Foreground="{StaticResource AccentCyanBrush}"
+                                                   Margin="0,0,0,12"/>
+                                        <WrapPanel>
+                                            <Button Content="🖥  Remote Desktop (RDP)" Style="{StaticResource GhostButton}"
+                                                    Click="DetailRdpButton_Click" Padding="14,8" Margin="0,0,8,8"/>
+                                            <Button Content="⚡  PowerShell Remote" Style="{StaticResource GhostButton}"
+                                                    Click="DetailPsRemoteButton_Click" Padding="14,8" Margin="0,0,8,8"/>
+                                            <Button Content="🌐  Open in Browser" Style="{StaticResource GhostButton}"
+                                                    Click="DetailBrowseButton_Click" Padding="14,8" Margin="0,0,8,8"/>
+                                            <Button x:Name="DetailWolButton" Content="🌙  Wake on LAN"
+                                                    Style="{StaticResource GhostButton}"
+                                                    Click="DetailWolButton_Click" Padding="14,8" Margin="0,0,8,8"/>
+                                        </WrapPanel>
+                                    </StackPanel>
+                                </Border>
+
+                            </StackPanel>
+                        </ScrollViewer>
+                    </Border>
+
                 </Grid>
             </Grid>
         </TabItem>

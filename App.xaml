@@ -203,6 +203,39 @@
             </Setter>
         </Style>
 
+        <!-- ================================================ -->
+        <!-- DETAILS LINK BUTTON (hyperlink-style, cyan text) -->
+        <!-- ================================================ -->
+        <Style x:Key="DetailsLinkButton" TargetType="Button">
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Foreground" Value="{StaticResource AccentCyanBrush}"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontFamily" Value="Segoe UI"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Padding" Value="4,0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <TextBlock x:Name="LinkText"
+                                   Text="{TemplateBinding Content}"
+                                   Foreground="{TemplateBinding Foreground}"
+                                   FontFamily="{TemplateBinding FontFamily}"
+                                   FontSize="{TemplateBinding FontSize}"
+                                   VerticalAlignment="Center"
+                                   HorizontalAlignment="Center"/>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="LinkText" Property="TextDecorations" Value="Underline"/>
+                                <Setter TargetName="LinkText" Property="Foreground" Value="{StaticResource AccentCyanDarkBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <Style x:Key="CircleStopButton" TargetType="Button" BasedOn="{StaticResource StopButton}">
             <Setter Property="Width" Value="24"/>
             <Setter Property="Height" Value="24"/>
@@ -353,6 +386,47 @@
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="checkBorder" Property="BorderBrush" Value="{StaticResource AccentCyanBrush}"/>
                                 <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- ============================================ -->
+        <!-- RADIO BUTTON STYLE                           -->
+        <!-- ============================================ -->
+        <Style x:Key="ModernRadioButton" TargetType="RadioButton">
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontFamily" Value="Segoe UI"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Padding" Value="8,0,0,0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <StackPanel Orientation="Horizontal">
+                            <Border x:Name="radioBorder"
+                                    Width="18" Height="18"
+                                    CornerRadius="9"
+                                    BorderThickness="1"
+                                    BorderBrush="{StaticResource BorderDarkBrush}"
+                                    Background="{StaticResource SecondaryDarkBrush}">
+                                <Ellipse x:Name="radioFill"
+                                         Width="8" Height="8"
+                                         Fill="{StaticResource AccentCyanBrush}"
+                                         Visibility="Collapsed"/>
+                            </Border>
+                            <ContentPresenter Margin="{TemplateBinding Padding}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="radioFill" Property="Visibility" Value="Visible"/>
+                                <Setter TargetName="radioBorder" Property="BorderBrush" Value="{StaticResource AccentCyanBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="radioBorder" Property="BorderBrush" Value="{StaticResource AccentCyanBrush}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>

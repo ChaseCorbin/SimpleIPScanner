@@ -313,7 +313,7 @@ namespace SimpleIPScanner
             result.IsPortScanning = true;
             try
             {
-                var ports = await PortScanner.ScanCommonPortsAsync(result.IP, _cts?.Token ?? CancellationToken.None);
+                var ports = await PortScanner.ScanPortsAsync(result.IP, _settings.PortScanMode, _settings.CustomPorts, CancellationToken.None);
                 result.OpenPorts = ports.Any() ? string.Join(", ", ports) : "";
                 result.HasScanRun = true;
             }
@@ -782,6 +782,19 @@ namespace SimpleIPScanner
         // True when the most-recent right-click landed on a data row (not empty space)
         private bool _rightClickedOnRow;
 
+        private ScanResult? _detailDevice;
+
+        private static readonly Dictionary<int, string> _portNames = new()
+        {
+            { 21,   "FTP"       }, { 22,   "SSH"       }, { 23,   "Telnet"    },
+            { 25,   "SMTP"      }, { 53,   "DNS"       }, { 80,   "HTTP"      },
+            { 110,  "POP3"      }, { 135,  "RPC"       }, { 139,  "NetBIOS"   },
+            { 143,  "IMAP"      }, { 443,  "HTTPS"     }, { 445,  "SMB"       },
+            { 3306, "MySQL"     }, { 3389, "RDP"       }, { 5985, "WinRM"     },
+            { 5986, "WinRM-SSL" }, { 8080, "HTTP-Alt"  }, { 8443, "HTTPS-Alt" },
+            { 8888, "HTTP-Dev"  }, { 27017, "MongoDB"  },
+        };
+
         private void ResultsGrid_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
         {
             var row = FindVisualParent<DataGridRow>(e.OriginalSource as DependencyObject);
@@ -888,6 +901,164 @@ namespace SimpleIPScanner
                 child = VisualTreeHelper.GetParent(child);
             }
             return null;
+        }
+
+        private void DetailsButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button btn && btn.Tag is ScanResult result)
+                ShowDeviceDetail(result);
+        }
+
+        private void ShowDeviceDetail(ScanResult result)
+        {
+            _detailDevice = result;
+
+            // Header
+            DetailHostname.Text = !string.IsNullOrEmpty(result.Hostname) && result.Hostname != "N/A"
+                                  ? result.Hostname : result.IP;
+            DetailOSIcon.Data = string.IsNullOrEmpty(result.OSIcon)
+                                ? null : Geometry.Parse(result.OSIcon);
+
+            var onlineBrush = (SolidColorBrush)FindResource(result.IsOnline ? "OnlineGreenBrush" : "OfflineGrayBrush");
+            DetailStatusDot.Fill   = onlineBrush;
+            DetailStatusDot2.Fill  = onlineBrush;
+            DetailStatusText.Text  = result.Status;
+            DetailStatusText2.Text = result.Status;
+            DetailPingText.Text    = result.PingDisplay;
+
+            // Identity card
+            DetailIP.Text           = result.IPDisplay;
+            DetailHostnameFull.Text = string.IsNullOrEmpty(result.Hostname) ? "—" : result.Hostname;
+            DetailMAC.Text          = string.IsNullOrEmpty(result.MAC) || result.MAC == "N/A" ? "—" : result.MAC;
+            DetailVendor.Text       = string.IsNullOrEmpty(result.Vendor) ? "—" : result.Vendor;
+
+            // Connectivity card
+            DetailPingFull.Text = result.IsOnline ? result.PingDisplay : "—";
+            DetailOS.Text       = string.IsNullOrEmpty(result.OSType) ? "Unknown" : result.OSType;
+            DetailSubnet.Text   = result.Subnet;
+
+            // Ports
+            DetailPortsWrap.Children.Clear();
+            var ports = result.OpenPortsList;
+            if (ports.Count > 0)
+            {
+                DetailPortsHeader.Text       = $"OPEN PORTS ({ports.Count})";
+                DetailNoPortsText.Visibility = Visibility.Collapsed;
+                DetailPortsWrap.Visibility   = Visibility.Visible;
+                foreach (var p in ports)
+                {
+                    // PortScanner format: "80 (HTTP)" — convert to "80  ·  HTTP"
+                    var entry = p.Trim();
+                    string chipText;
+                    var spaceIdx = entry.IndexOf(' ');
+                    if (spaceIdx > 0 && int.TryParse(entry[..spaceIdx], out _))
+                    {
+                        var svcPart = entry[(spaceIdx + 1)..].Trim('(', ')');
+                        chipText = $"{entry[..spaceIdx]}  ·  {svcPart}";
+                    }
+                    else if (int.TryParse(entry, out int num))
+                    {
+                        _portNames.TryGetValue(num, out string? svc);
+                        chipText = svc != null ? $"{num}  ·  {svc}" : entry;
+                    }
+                    else
+                    {
+                        chipText = entry;
+                    }
+                    var chip = new Border
+                    {
+                        Background      = (Brush)FindResource("PrimaryDarkBrush"),
+                        BorderBrush     = (Brush)FindResource("BorderDarkBrush"),
+                        BorderThickness = new Thickness(1),
+                        CornerRadius    = new CornerRadius(6),
+                        Padding         = new Thickness(10, 5, 10, 5),
+                        Margin          = new Thickness(0, 0, 8, 8),
+                        Child           = new TextBlock
+                        {
+                            Text       = chipText,
+                            FontSize   = 13,
+                            Foreground = (Brush)FindResource("AccentCyanBrush"),
+                            FontFamily = new FontFamily("Segoe UI"),
+                        }
+                    };
+                    DetailPortsWrap.Children.Add(chip);
+                }
+            }
+            else
+            {
+                DetailPortsHeader.Text       = "OPEN PORTS";
+                DetailPortsWrap.Visibility   = Visibility.Collapsed;
+                DetailNoPortsText.Visibility = Visibility.Visible;
+            }
+
+            // WoL only useful when MAC is known
+            DetailWolButton.IsEnabled = !string.IsNullOrEmpty(result.MAC) && result.MAC != "N/A";
+
+            // Swap panels
+            ResultsContainer.Visibility  = Visibility.Collapsed;
+            DeviceDetailPanel.Visibility = Visibility.Visible;
+        }
+
+        private void BackButton_Click(object sender, RoutedEventArgs e)
+        {
+            DeviceDetailPanel.Visibility = Visibility.Collapsed;
+            ResultsContainer.Visibility  = Visibility.Visible;
+            _detailDevice = null;
+        }
+
+        private async void DetailRescanButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (_detailDevice == null) return;
+            _detailDevice.IsScanning     = true;
+            DetailRescanButton.IsEnabled = false;
+            var updated = await NetworkScanner.RescanIP(_detailDevice.IP);
+            _detailDevice.IsOnline  = updated.IsOnline;
+            _detailDevice.Hostname  = updated.Hostname;
+            _detailDevice.PingMs    = updated.PingMs;
+            _detailDevice.TTL       = updated.TTL;
+            _detailDevice.OpenPorts = updated.OpenPorts;
+            _detailDevice.IsScanning     = false;
+            DetailRescanButton.IsEnabled = true;
+            ShowDeviceDetail(_detailDevice);
+        }
+
+        private void DetailRdpButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (_detailDevice == null) return;
+            Process.Start("mstsc.exe", $"/v:{GetConnectionTarget(_detailDevice)}");
+        }
+
+        private void DetailPsRemoteButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (_detailDevice == null) return;
+            Process.Start(new ProcessStartInfo
+            {
+                FileName        = "powershell.exe",
+                Arguments       = $"-NoExit -Command \"Enter-PSSession -ComputerName '{GetConnectionTarget(_detailDevice)}'\"",
+                UseShellExecute = true
+            });
+        }
+
+        private void DetailBrowseButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (_detailDevice == null) return;
+            Process.Start(new ProcessStartInfo { FileName = $"http://{_detailDevice.IP}", UseShellExecute = true });
+        }
+
+        private void DetailWolButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (_detailDevice?.MAC == null) return;
+            try
+            {
+                SendWakeOnLan(_detailDevice.MAC);
+                MessageBox.Show($"Magic packet sent to {_detailDevice.MAC}.",
+                    "Wake-on-LAN", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to send WOL packet: {ex.Message}",
+                    "Wake-on-LAN Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
         #endregion

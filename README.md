@@ -7,7 +7,7 @@
 
 A modern, high-performance WPF application for network discovery, DNS performance testing, and visual traceroute monitoring.
 
-![Version](https://img.shields.io/badge/Version-1.5.2-10B981)
+![Version](https://img.shields.io/badge/Version-1.6.0-10B981)
 ![Platform](https://img.shields.io/badge/Platform-Windows-0078d4)
 ![Framework](https://img.shields.io/badge/Framework-.NET%208-512bd4)
 
@@ -40,7 +40,7 @@ Once installed, the app silently checks for new releases on startup. When an upd
 - **OS Fingerprinting**: Detects Windows, Apple, and Linux devices via TTL heuristics.
 - **Vendor Detection**: Identifies device manufacturers from MAC OUI (IEEE database).
 - **Hostname Resolution**: Two-step fallback — standard DNS PTR lookup, then NetBIOS Node Status (UDP 137) for Windows machines not registered in DNS.
-- **Automatic Port Scanning**: Identifies common open ports (HTTP, HTTPS, SSH, RDP, SMB, etc.).
+- **Configurable Port Scanning**: Choose from three modes — **Common** (21 well-known ports: HTTP, HTTPS, SSH, RDP, SMB, etc.), **All** (full 1–65535 TCP scan via sequential batching), or **Custom** (scan only the ports you specify, comma-separated).
 - **Right-Click Device Tools**: Right-click any scanned device to instantly **Open in Browser**, send a **Wake-on-LAN** magic packet, launch **Remote Desktop (RDP)**, or open a **PowerShell Remote Session** (`Enter-PSSession`).
 
 ### 🚀 DNS Benchmark
@@ -58,6 +58,7 @@ Once installed, the app silently checks for new releases on startup. When an upd
 ### ⚙️ Settings
 - **About**: View the current app version and open the GitHub repository.
 - **Auto-Update Toggle**: Enable or disable the startup update check. Manual "Check Now" always available regardless of the setting.
+- **Port Scan Mode**: Choose between Common ports, All ports (1–65535), or a Custom port list. The selected mode is applied to every device scanned.
 - Settings persist across sessions in `%AppData%\SimpleIPScanner\settings.json`.
 
 ---
@@ -74,7 +75,7 @@ Once installed, the app silently checks for new releases on startup. When an upd
 Requires the `vpk` CLI (one-time setup: `dotnet tool install -g vpk`).
 
 ```powershell
-.\publish_release.ps1 -Version "1.5.0" -GitHubToken "ghp_xxxx"
+.\publish_release.ps1 -Version "1.6.0" -GitHubToken "ghp_xxxx"
 ```
 
 This publishes a self-contained build, packages it with Velopack (`vpk pack`), and uploads the installer and update feed to GitHub Releases (`vpk upload github`). Output goes to `bin\Release\VelopackOutput\`.
@@ -89,6 +90,11 @@ This publishes a self-contained build, packages it with Velopack (`vpk pack`), a
 ---
 
 ## 📋 Changelog
+
+### v1.6.0
+- **Configurable port scan mode** — new setting in the Settings dialog to choose how ports are scanned per device: **Common** scans 21 well-known ports (HTTP, HTTPS, SSH, RDP, SMB, and more); **All** performs a full TCP sweep of ports 1–65535 using sequential 500-port batches (note: expect longer scan times per device); **Custom** scans only the comma-separated list of ports you enter. The selected mode persists across sessions.
+- **Custom port list** — when Custom mode is selected, a text input appears in Settings where you can enter any port numbers separated by commas; invalid entries are silently ignored and duplicates are deduplicated.
+- **Hostname resolution fix** — corrected a regression that caused garbled hostnames (e.g. `??c?`) for some devices; DNS PTR → NetBIOS Node Status fallback chain is restored to its original reliable behavior.
 
 ### v1.5.2
 - **Right-click context menu** — right-clicking a device row now only opens the menu when an actual device is clicked; right-clicking empty space in the results grid no longer triggers the menu

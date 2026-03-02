@@ -4,9 +4,13 @@ using System.Text.Json;
 
 namespace SimpleIPScanner.Services
 {
+    public enum PortScanMode { Common, All, Custom }
+
     public class AppSettings
     {
         public bool AutoCheckUpdates { get; set; } = true;
+        public PortScanMode PortScanMode { get; set; } = PortScanMode.Common;
+        public string CustomPorts { get; set; } = "";
 
         private static string SettingsPath => Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),

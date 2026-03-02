@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Reflection;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Media;
 using SimpleIPScanner.Services;
 
@@ -24,6 +25,12 @@ namespace SimpleIPScanner
             VersionText.Text = $"Version {version}";
 
             AutoUpdateCheckBox.IsChecked = _settings.AutoCheckUpdates;
+
+            ModeCommonRadio.IsChecked  = _settings.PortScanMode == PortScanMode.Common;
+            ModeAllRadio.IsChecked     = _settings.PortScanMode == PortScanMode.All;
+            ModeCustomRadio.IsChecked  = _settings.PortScanMode == PortScanMode.Custom;
+            CustomPortsBox.Text        = _settings.CustomPorts;
+            CustomPortsBox.IsEnabled   = _settings.PortScanMode == PortScanMode.Custom;
         }
 
         private void AutoUpdate_Changed(object sender, RoutedEventArgs e)
@@ -52,6 +59,26 @@ namespace SimpleIPScanner
             }
 
             CheckNowBtn.IsEnabled = true;
+        }
+
+        private void PortMode_Changed(object sender, RoutedEventArgs e)
+        {
+            if (ModeCommonRadio == null) return; // guard against firing before InitializeComponent
+
+            var mode = ModeAllRadio.IsChecked    == true ? PortScanMode.All
+                     : ModeCustomRadio.IsChecked == true ? PortScanMode.Custom
+                     : PortScanMode.Common;
+
+            _settings.PortScanMode    = mode;
+            CustomPortsBox.IsEnabled  = mode == PortScanMode.Custom;
+            _settings.Save();
+        }
+
+        private void CustomPorts_Changed(object sender, TextChangedEventArgs e)
+        {
+            if (_settings == null) return;
+            _settings.CustomPorts = CustomPortsBox.Text;
+            _settings.Save();
         }
 
         private void GitHubLink_Click(object sender, RoutedEventArgs e)

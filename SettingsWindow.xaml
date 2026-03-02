@@ -118,6 +118,52 @@
                 </StackPanel>
             </Border>
 
+            <!-- ===== PORT SCANNING ===== -->
+            <TextBlock Text="PORT SCANNING" FontSize="10" FontWeight="Bold" FontFamily="Segoe UI"
+                       Foreground="{StaticResource TextSecondaryBrush}"
+                       Margin="2,22,0,8"/>
+
+            <Border Background="{StaticResource CardDarkBrush}" CornerRadius="10" Padding="20">
+                <StackPanel>
+
+                    <!-- Common -->
+                    <RadioButton x:Name="ModeCommonRadio" Content="Common ports"
+                                 GroupName="PortMode" Style="{StaticResource ModernRadioButton}"
+                                 Checked="PortMode_Changed"/>
+                    <TextBlock Text="Scans 21 well-known ports: HTTP, HTTPS, SSH, RDP, SMB, and more."
+                               FontSize="11" FontFamily="Segoe UI"
+                               Foreground="{StaticResource TextSecondaryBrush}"
+                               TextWrapping="Wrap" Margin="26,4,0,14"/>
+
+                    <Border Height="1" Background="{StaticResource BorderDarkBrush}" Margin="0,0,0,14"/>
+
+                    <!-- All -->
+                    <RadioButton x:Name="ModeAllRadio" Content="All ports (1–65535)"
+                                 GroupName="PortMode" Style="{StaticResource ModernRadioButton}"
+                                 Checked="PortMode_Changed"/>
+                    <TextBlock Text="Scans every TCP port. Expect significantly longer scan times per device."
+                               FontSize="11" FontFamily="Segoe UI"
+                               Foreground="{StaticResource TextSecondaryBrush}"
+                               TextWrapping="Wrap" Margin="26,4,0,14"/>
+
+                    <Border Height="1" Background="{StaticResource BorderDarkBrush}" Margin="0,0,0,14"/>
+
+                    <!-- Custom -->
+                    <RadioButton x:Name="ModeCustomRadio" Content="Custom ports"
+                                 GroupName="PortMode" Style="{StaticResource ModernRadioButton}"
+                                 Checked="PortMode_Changed"/>
+                    <TextBlock Text="Enter the port numbers to scan, separated by commas."
+                               FontSize="11" FontFamily="Segoe UI"
+                               Foreground="{StaticResource TextSecondaryBrush}"
+                               TextWrapping="Wrap" Margin="26,4,0,8"/>
+                    <TextBox x:Name="CustomPortsBox"
+                             Style="{StaticResource ModernTextBox}"
+                             Margin="26,0,0,0"
+                             TextChanged="CustomPorts_Changed"/>
+
+                </StackPanel>
+            </Border>
+
             <!-- Close -->
             <Button Content="Close"
                     Style="{StaticResource GhostButton}"
