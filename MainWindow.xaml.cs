@@ -46,15 +46,18 @@ namespace SimpleIPScanner
         private readonly UpdateService _updateService = new();
         private readonly AppSettings _settings = AppSettings.Load();
 
-        // Cached brushes for the chart tooltip hot path (avoids FindResource on every mouse-move)
+        // Timeout log file — written to the app directory for long-running trace sessions
+        private static readonly string _timeoutLogPath =
+            System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "traceroute_timeouts.log");
+        private static readonly object _logLock = new();
+
+        // Per-chart-card drag state (keyed by the ChartContainer Grid instance)
+        private readonly Dictionary<Grid, (bool isDragging, Point startPoint, DateTime startViewEnd)> _chartDragStates = new();
+
+        // Cached tooltip brushes (initialised lazily on first hover)
         private Brush? _tooltipRedBrush;
         private Brush? _tooltipOrangeBrush;
         private Brush? _tooltipGreenBrush;
-
-        // Chart pan / drag state
-        private bool _isDragging;
-        private Point _dragStartPoint;
-        private DateTime _dragStartViewEnd;
 
         public MainWindow()
         {
@@ -72,6 +75,7 @@ namespace SimpleIPScanner
             DnsResultsGrid.ItemsSource = _dnsResults;
             CustomDnsServersList.ItemsSource = _customDnsServers;
             TraceTargetsList.ItemsSource = _traceSessions;
+            AllChartsControl.ItemsSource = _traceSessions;
             SubnetChipList.ItemsSource = _subnets;
 
             // Auto-detect the primary subnet and add it to the scan list
@@ -584,31 +588,25 @@ namespace SimpleIPScanner
         {
             if (TraceTargetsList.SelectedItem is TraceSession session)
             {
-                TraceDetailArea.DataContext = session;
-                SyncIntervalButtons(session.ChartIntervalMinutes);
+                SidebarHopSection.DataContext  = session;
+                SidebarHopSection.Visibility   = Visibility.Visible;
             }
             else
-                TraceDetailArea.DataContext = null;
-        }
-
-        private void SyncIntervalButtons(int minutes)
-        {
-            foreach (var rb in new[] { RbInterval1m, RbInterval5m, RbInterval10m, RbInterval1h, RbInterval2h })
             {
-                if (rb.Tag is string tag && int.TryParse(tag, out int tagMins))
-                    rb.IsChecked = tagMins == minutes;
+                SidebarHopSection.DataContext  = null;
+                SidebarHopSection.Visibility   = Visibility.Collapsed;
             }
         }
 
-        private async void ToggleTrace_Click(object sender, RoutedEventArgs e)
+        // Per-card start/stop button inside the all-charts ItemsControl
+        private async void ToggleTraceCard_Click(object sender, RoutedEventArgs e)
         {
-            if (TraceTargetsList.SelectedItem is TraceSession session)
+            if (sender is FrameworkElement fe && fe.DataContext is TraceSession session)
             {
                 if (session.IsActive)
                     StopTrace(session);
                 else
                     await StartTrace(session);
-                TraceTarget_SelectionChanged(null!, null!);
             }
         }
 
@@ -616,6 +614,17 @@ namespace SimpleIPScanner
         {
             var tasks = _traceSessions.Where(s => !s.IsActive).Select(s => StartTrace(s));
             await Task.WhenAll(tasks);
+        }
+
+        private static void LogTimeout(string destination)
+        {
+            try
+            {
+                string line = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] TIMEOUT: {destination}{Environment.NewLine}";
+                lock (_logLock)
+                    System.IO.File.AppendAllText(_timeoutLogPath, line);
+            }
+            catch { /* best-effort logging — never crash the UI */ }
         }
 
         private async Task StartTrace(TraceSession session)
@@ -641,10 +650,15 @@ namespace SimpleIPScanner
                     try
                     {
                         var reply = await pingSender.SendPingAsync(session.Destination, 1000);
-                        Dispatcher.Invoke(() => session.AddDataPoint(
-                            reply.Status == System.Net.NetworkInformation.IPStatus.Success ? reply.RoundtripTime : -1));
+                        bool timeout = reply.Status != System.Net.NetworkInformation.IPStatus.Success;
+                        if (timeout) LogTimeout(session.Destination);
+                        Dispatcher.Invoke(() => session.AddDataPoint(timeout ? -1 : reply.RoundtripTime));
                     }
-                    catch { Dispatcher.Invoke(() => session.AddDataPoint(-1)); }
+                    catch
+                    {
+                        LogTimeout(session.Destination);
+                        Dispatcher.Invoke(() => session.AddDataPoint(-1));
+                    }
 
                     await Task.Delay(200, cts.Token);
                 }
@@ -667,101 +681,125 @@ namespace SimpleIPScanner
         {
             if (sender is RadioButton rb && rb.Tag is string minsStr && int.TryParse(minsStr, out int mins))
             {
-                if (TraceDetailArea.DataContext is TraceSession session)
+                if (rb.DataContext is TraceSession session)
                     session.ChartIntervalMinutes = mins;
             }
         }
 
-        private void ChartContainer_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        private void BackToLiveBtn_Click(object sender, RoutedEventArgs e)
         {
-            if (TraceDetailArea.DataContext is not TraceSession session) return;
-            _isDragging = true;
-            _dragStartPoint = e.GetPosition(ChartContainer);
-            _dragStartViewEnd = session.ViewEnd;
-            ChartContainer.CaptureMouse();
-            ChartContainer.Cursor = Cursors.SizeWE;
+            if (sender is FrameworkElement fe && fe.DataContext is TraceSession session)
+                session.ResetToLive();
         }
 
-        private void ChartContainer_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+        // ── Per-card chart mouse interactions ──────────────────────────────────
+
+        /// <summary>Walks the visual tree downward to find the first child of type T with a matching Name.</summary>
+        private static T? FindChild<T>(DependencyObject parent, string name) where T : FrameworkElement
         {
-            _isDragging = false;
-            ChartContainer.ReleaseMouseCapture();
-            ChartContainer.Cursor = Cursors.Cross;
-        }
-
-        private void ChartContainer_MouseMove(object sender, MouseEventArgs e)
-        {
-            if (TooltipLine == null || TooltipPopup == null || TraceDetailArea == null || ChartContainer == null) return;
-            if (TraceDetailArea.DataContext is not TraceSession session) return;
-
-            Point mousePos = e.GetPosition(ChartContainer);
-
-            // Handle drag-to-pan
-            if (_isDragging)
+            int count = VisualTreeHelper.GetChildrenCount(parent);
+            for (int i = 0; i < count; i++)
             {
-                double deltaX = mousePos.X - _dragStartPoint.X;
-                double chartWidth = ChartContainer.ActualWidth;
-                if (chartWidth > 0)
+                var child = VisualTreeHelper.GetChild(parent, i);
+                if (child is T typed && typed.Name == name) return typed;
+                var result = FindChild<T>(child, name);
+                if (result != null) return result;
+            }
+            return null;
+        }
+
+        private void ChartCard_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            if (sender is not Grid chart || chart.DataContext is not TraceSession session) return;
+            _chartDragStates[chart] = (true, e.GetPosition(chart), session.ViewEnd);
+            chart.CaptureMouse();
+            chart.Cursor = Cursors.SizeWE;
+        }
+
+        private void ChartCard_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            if (sender is not Grid chart) return;
+            if (_chartDragStates.TryGetValue(chart, out var s))
+                _chartDragStates[chart] = (false, s.startPoint, s.startViewEnd);
+            chart.ReleaseMouseCapture();
+            chart.Cursor = Cursors.Cross;
+        }
+
+        private void ChartCard_MouseLeave(object sender, MouseEventArgs e)
+        {
+            if (sender is not Grid chart) return;
+            if (_chartDragStates.TryGetValue(chart, out var s))
+                _chartDragStates[chart] = (false, s.startPoint, s.startViewEnd);
+            chart.ReleaseMouseCapture();
+            chart.Cursor = Cursors.Cross;
+
+            if (FindChild<Line>(chart, "ChartTooltipLine") is { } line)   line.Visibility = Visibility.Collapsed;
+            if (FindChild<Border>(chart, "ChartTooltipPopup") is { } popup) popup.Visibility = Visibility.Collapsed;
+        }
+
+        private void ChartCard_MouseMove(object sender, MouseEventArgs e)
+        {
+            if (sender is not Grid chart || chart.DataContext is not TraceSession session) return;
+
+            var tooltipLine    = FindChild<Line>(chart,      "ChartTooltipLine");
+            var tooltipPopup   = FindChild<Border>(chart,    "ChartTooltipPopup");
+            var tooltipTime    = FindChild<TextBlock>(chart, "ChartTooltipTime");
+            var tooltipLatency = FindChild<TextBlock>(chart, "ChartTooltipLatency");
+            if (tooltipLine == null || tooltipPopup == null) return;
+
+            Point mousePos = e.GetPosition(chart);
+
+            // Drag-to-pan
+            _chartDragStates.TryGetValue(chart, out var drag);
+            if (drag.isDragging)
+            {
+                double deltaX = mousePos.X - drag.startPoint.X;
+                if (chart.ActualWidth > 0)
                 {
-                    double windowSeconds = session.ChartIntervalMinutes * 60.0;
-                    double deltaSeconds = -(deltaX / chartWidth) * windowSeconds;
-                    session.PanTo(_dragStartViewEnd + TimeSpan.FromSeconds(deltaSeconds));
+                    double windowSec = session.ChartIntervalMinutes * 60.0;
+                    double deltaSec  = -(deltaX / chart.ActualWidth) * windowSec;
+                    session.PanTo(drag.startViewEnd + TimeSpan.FromSeconds(deltaSec));
                 }
-                // Hide tooltip while dragging
-                TooltipLine.Visibility = Visibility.Collapsed;
-                TooltipPopup.Visibility = Visibility.Collapsed;
+                tooltipLine.Visibility  = Visibility.Collapsed;
+                tooltipPopup.Visibility = Visibility.Collapsed;
                 return;
             }
 
             if (!session.FilteredHistory.Any()) return;
 
-            // Map mouse X → nearest time → nearest data point (time-relative lookup)
-            double xRatio = mousePos.X / ChartContainer.ActualWidth;
-            double totalWindowSeconds = session.ChartIntervalMinutes * 60.0;
-            DateTime mouseTime = session.ViewStart + TimeSpan.FromSeconds(xRatio * totalWindowSeconds);
+            // Map mouse X → nearest data point
+            double xRatio       = mousePos.X / chart.ActualWidth;
+            double totalSec     = session.ChartIntervalMinutes * 60.0;
+            DateTime mouseTime  = session.ViewStart + TimeSpan.FromSeconds(xRatio * totalSec);
 
             var nearest = session.FilteredHistory
                 .OrderBy(p => Math.Abs((p.Timestamp - mouseTime).TotalSeconds))
                 .First();
 
-            double xPos = (nearest.Timestamp - session.ViewStart).TotalSeconds / totalWindowSeconds * ChartContainer.ActualWidth;
-            xPos = Math.Max(0, Math.Min(ChartContainer.ActualWidth, xPos));
+            double xPos = (nearest.Timestamp - session.ViewStart).TotalSeconds / totalSec * chart.ActualWidth;
+            xPos = Math.Clamp(xPos, 0, chart.ActualWidth);
 
-            TooltipLine.X1 = TooltipLine.X2 = xPos;
-            TooltipLine.Visibility = Visibility.Visible;
+            tooltipLine.X1 = tooltipLine.X2 = xPos;
+            tooltipLine.Visibility  = Visibility.Visible;
+            tooltipPopup.Visibility = Visibility.Visible;
 
-            TooltipPopup.Visibility = Visibility.Visible;
-            TooltipTime.Text = nearest.Timestamp.ToString("HH:mm:ss");
-            TooltipLatency.Text = nearest.Latency < 0 ? "Timeout" : $"{nearest.Latency:F0} ms";
+            if (tooltipTime != null)    tooltipTime.Text = nearest.Timestamp.ToString("HH:mm:ss");
+            if (tooltipLatency != null)
+            {
+                tooltipLatency.Text = nearest.Latency < 0 ? "Timeout" : $"{nearest.Latency:F0} ms";
+                _tooltipRedBrush    ??= FindResource("ErrorRedBrush")     as Brush;
+                _tooltipOrangeBrush ??= FindResource("WarningOrangeBrush") as Brush;
+                _tooltipGreenBrush  ??= FindResource("OnlineGreenBrush")  as Brush;
+                tooltipLatency.Foreground =
+                    nearest.Latency < 0 || nearest.Latency >= 200 ? _tooltipRedBrush :
+                    nearest.Latency >= 100                         ? _tooltipOrangeBrush :
+                                                                     _tooltipGreenBrush;
+            }
 
-            _tooltipRedBrush    ??= FindResource("ErrorRedBrush") as Brush;
-            _tooltipOrangeBrush ??= FindResource("WarningOrangeBrush") as Brush;
-            _tooltipGreenBrush  ??= FindResource("OnlineGreenBrush") as Brush;
-
-            if (nearest.Latency < 0 || nearest.Latency >= 200) TooltipLatency.Foreground = _tooltipRedBrush;
-            else if (nearest.Latency >= 100)                    TooltipLatency.Foreground = _tooltipOrangeBrush;
-            else                                                TooltipLatency.Foreground = _tooltipGreenBrush;
-
-            Canvas.SetLeft(TooltipPopup, xPos + 10);
-            Canvas.SetTop(TooltipPopup, Math.Min(mousePos.Y, ChartContainer.ActualHeight - 50));
-
-            if (xPos + TooltipPopup.ActualWidth + 20 > ChartContainer.ActualWidth)
-                Canvas.SetLeft(TooltipPopup, xPos - TooltipPopup.ActualWidth - 10);
-        }
-
-        private void ChartContainer_MouseLeave(object sender, MouseEventArgs e)
-        {
-            _isDragging = false;
-            ChartContainer.ReleaseMouseCapture();
-            ChartContainer.Cursor = Cursors.Cross;
-            TooltipLine.Visibility = Visibility.Collapsed;
-            TooltipPopup.Visibility = Visibility.Collapsed;
-        }
-
-        private void BackToLiveBtn_Click(object sender, RoutedEventArgs e)
-        {
-            if (TraceDetailArea.DataContext is TraceSession session)
-                session.ResetToLive();
+            Canvas.SetLeft(tooltipPopup, xPos + 10);
+            Canvas.SetTop(tooltipPopup, Math.Min(mousePos.Y, chart.ActualHeight - 50));
+            if (xPos + tooltipPopup.ActualWidth + 20 > chart.ActualWidth)
+                Canvas.SetLeft(tooltipPopup, xPos - tooltipPopup.ActualWidth - 10);
         }
 
         private void StopTrace(TraceSession session)

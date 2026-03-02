@@ -7,7 +7,7 @@
 
 A modern, high-performance WPF application for network discovery, DNS performance testing, and visual traceroute monitoring.
 
-![Version](https://img.shields.io/badge/Version-1.6.0-10B981)
+![Version](https://img.shields.io/badge/Version-1.6.1-10B981)
 ![Platform](https://img.shields.io/badge/Platform-Windows-0078d4)
 ![Framework](https://img.shields.io/badge/Framework-.NET%208-512bd4)
 
@@ -51,7 +51,10 @@ Once installed, the app silently checks for new releases on startup. When an upd
 
 ### 🗺️ Visual Traceroute
 - **Live Hop-by-Hop Monitoring**: Continuous traceroute to one or more targets simultaneously.
-- **Performance Timeline**: Interactive latency chart with 1m / 5m / 10m / 1h / 2h / 8h zoom windows and click-drag panning through history.
+- **Multi-Chart View**: All monitored targets display their latency charts simultaneously on one scrollable page — no clicking through sessions.
+- **Performance Timeline**: Interactive latency chart with 1m / 5m / 10m / 1h / 2h zoom windows, mouse-over crosshair with timestamp/latency tooltip, and click-drag panning through history.
+- **Route Path Sidebar**: Click any session to reveal its hop-by-hop path in the sidebar; hop latencies are color-coded green / orange / red as they approach 200ms for at-a-glance health assessment.
+- **Timeout Log**: Timeouts are automatically logged to `traceroute_timeouts.log` in the app directory with timestamps, making it easy to review outages after a long monitoring run.
 - **Multi-Target**: Add any number of hosts and monitor them in parallel.
 - **Packet Loss & Jitter**: Track packet loss percentage and average latency per session.
 
@@ -90,6 +93,14 @@ This publishes a self-contained build, packages it with Velopack (`vpk pack`), a
 ---
 
 ## 📋 Changelog
+
+### v1.6.1
+- **Multi-chart view** — all monitored traceroute targets now display their latency charts simultaneously on a single scrollable page; no longer need to click through each session individually
+- **Timeout logging** — timeouts are written to `traceroute_timeouts.log` in the app directory with a timestamp per entry, making it easy to review which hosts went down during a long monitoring session
+- **Route Path sidebar** — selecting a session in the session list reveals a collapsible Route Path panel in the left sidebar showing each hop's number, IP, hostname, and latency; the full chart area is preserved on the right
+- **Hop latency color-coding** — hop latency values in the Route Path panel are color-coded: green below 100ms, orange 100–199ms, red 200ms+, and gray for non-responding hops; mirrors the chart color scale for quick identification of slow hops
+- **Mouse-over chart tooltip** — hovering over any chart card displays a crosshair line with a popup showing the exact timestamp and latency at that point
+- **Per-card controls** — each chart card has its own Resume/Stop toggle, interval selector (1m / 5m / 10m / 1h / 2h), Pause, and ↩ Live buttons; drag-to-pan works independently per chart
 
 ### v1.6.0
 - **Configurable port scan mode** — new setting in the Settings dialog to choose how ports are scanned per device: **Common** scans 21 well-known ports (HTTP, HTTPS, SSH, RDP, SMB, and more); **All** performs a full TCP sweep of ports 1–65535 using sequential 500-port batches (note: expect longer scan times per device); **Custom** scans only the comma-separated list of ports you enter. The selected mode persists across sessions.

@@ -141,4 +141,32 @@ namespace SimpleIPScanner.Converters
         public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
             => throw new NotSupportedException();
     }
+
+    /// <summary>
+    /// Converts a single hop latency (long ms) to a color brush.
+    /// &lt; 0      → gray  (timeout / no response)
+    /// 0–99    → green
+    /// 100–199 → orange
+    /// ≥ 200   → red
+    /// </summary>
+    public class HopLatencyColorConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value is long latency)
+            {
+                if (latency < 0)
+                    return Application.Current.FindResource("OfflineGrayBrush");
+                if (latency < 100)
+                    return Application.Current.FindResource("OnlineGreenBrush");
+                if (latency < 200)
+                    return new SolidColorBrush((Color)Application.Current.FindResource("WarningOrange"));
+                return new SolidColorBrush((Color)Application.Current.FindResource("ErrorRed"));
+            }
+            return Application.Current.FindResource("AccentCyanBrush");
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+            => throw new NotSupportedException();
+    }
 }

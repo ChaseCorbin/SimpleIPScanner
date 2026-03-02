@@ -786,6 +786,7 @@
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="*"/>
                                 <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
 
                             <Border Grid.Row="0" Padding="16" Background="{StaticResource CardDarkBrush}">
@@ -848,263 +849,324 @@
                                 </ListBox.ItemTemplate>
                             </ListBox>
 
-                            <Border Grid.Row="2" Padding="16" Background="{StaticResource CardDarkBrush}">
+                            <!-- Route Path hop panel — shown when a session is selected -->
+                            <Border x:Name="SidebarHopSection" Grid.Row="2" Visibility="Collapsed"
+                                    BorderBrush="{StaticResource BorderDarkBrush}" BorderThickness="0,1,0,0"
+                                    Background="{StaticResource SecondaryDarkBrush}">
+                                <StackPanel>
+                                    <Grid Margin="12,10,12,6">
+                                        <TextBlock Text="Route Path" FontSize="11" FontWeight="SemiBold"
+                                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                                   VerticalAlignment="Center"/>
+                                        <TextBlock Text="{Binding Destination}" FontSize="11" FontWeight="SemiBold"
+                                                   Foreground="{StaticResource AccentCyanBrush}"
+                                                   HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                    </Grid>
+                                    <ScrollViewer MaxHeight="180" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                                        <ItemsControl ItemsSource="{Binding Hops}" Margin="8,0,8,8">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Grid Margin="4,3">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="20"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="52"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <TextBlock Grid.Column="0" Text="{Binding HopNumber}" FontSize="10"
+                                                                   Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Top" Margin="0,2,0,0"/>
+                                                        <StackPanel Grid.Column="1" Margin="4,0,4,0">
+                                                            <TextBlock Text="{Binding IP}" FontSize="11" FontFamily="Consolas"
+                                                                       Foreground="{StaticResource TextPrimaryBrush}"/>
+                                                            <TextBlock Text="{Binding Hostname}" FontSize="9"
+                                                                       Foreground="{StaticResource TextSecondaryBrush}"
+                                                                       TextTrimming="CharacterEllipsis"/>
+                                                        </StackPanel>
+                                                        <TextBlock Grid.Column="2" FontSize="11" FontWeight="SemiBold"
+                                                                   VerticalAlignment="Center" HorizontalAlignment="Right">
+                                                            <TextBlock.Style>
+                                                                <Style TargetType="TextBlock">
+                                                                    <Setter Property="Text" Value="{Binding Latency, StringFormat={}{0}ms}"/>
+                                                                    <Setter Property="Foreground" Value="{Binding Latency, Converter={StaticResource HopLatencyColorConverter}}"/>
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding IsTimeout}" Value="True">
+                                                                            <Setter Property="Text" Value="*"/>
+                                                                            <Setter Property="Foreground" Value="{StaticResource OfflineGrayBrush}"/>
+                                                                        </DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </TextBlock.Style>
+                                                        </TextBlock>
+                                                    </Grid>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </ScrollViewer>
+                                </StackPanel>
+                            </Border>
+
+                            <Border Grid.Row="3" Padding="16" Background="{StaticResource CardDarkBrush}">
                                 <Button Content="▶ Start All" Style="{StaticResource ScanButton}" Click="StartAllTraces_Click"/>
                             </Border>
                         </Grid>
                     </Border>
 
-                    <!-- Main Area: Trace Details -->
+                    <!-- Main Area: Charts -->
                     <Grid x:Name="TraceDetailArea" Grid.Column="1">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="*"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="200" MinHeight="100"/>
-                        </Grid.RowDefinitions>
+                        <!-- All-Sessions Chart Scroll Area (full height) -->
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                            <ItemsControl x:Name="AllChartsControl" Margin="0,0,0,12">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Margin="24,12,24,0" CornerRadius="8"
+                                                Background="{StaticResource CardDarkBrush}"
+                                                BorderBrush="{StaticResource BorderDarkBrush}" BorderThickness="1"
+                                                Padding="14,12">
+                                            <Grid>
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="100"/>
+                                                    <RowDefinition Height="16"/>
+                                                </Grid.RowDefinitions>
 
-                        <!-- Session Header -->
-                        <Border Grid.Row="0" Padding="24" Background="{StaticResource PrimaryDarkBrush}">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <StackPanel>
-                                    <TextBlock Text="{Binding Destination, FallbackValue=Select a host to view details}" FontSize="20" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}"/>
-                                    <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
-                                        <TextBlock Text="Duration: " Foreground="{StaticResource TextSecondaryBrush}"/>
-                                        <TextBlock Text="{Binding ElapsedDisplay}" Foreground="{StaticResource AccentCyanBrush}" FontWeight="SemiBold"/>
-                                    </StackPanel>
-                                </StackPanel>
-                                <StackPanel Grid.Column="1" Orientation="Horizontal">
-                                    <Button x:Name="ToggleTraceBtn" Click="ToggleTrace_Click">
-                                        <Button.Style>
-                                            <Style TargetType="Button" BasedOn="{StaticResource ScanButton}">
-                                                <Setter Property="Content" Value="▶ Resume"/>
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding IsActive}" Value="True">
-                                                        <Setter Property="Content" Value="■ Stop"/>
-                                                        <Setter Property="Background" Value="{StaticResource ErrorRedBrush}"/>
-                                                        <Setter Property="Template">
-                                                            <Setter.Value>
-                                                                <ControlTemplate TargetType="Button">
-                                                                    <Border x:Name="btnBorder" CornerRadius="8" Padding="24,10" Background="{StaticResource ErrorRedBrush}">
-                                                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                                                    </Border>
-                                                                    <ControlTemplate.Triggers>
-                                                                        <Trigger Property="IsMouseOver" Value="True">
-                                                                            <Setter TargetName="btnBorder" Property="Background" Value="{StaticResource ErrorRedDarkBrush}"/>
-                                                                        </Trigger>
-                                                                    </ControlTemplate.Triggers>
-                                                                </ControlTemplate>
-                                                            </Setter.Value>
-                                                        </Setter>
-                                                    </DataTrigger>
-                                                    <DataTrigger Binding="{Binding Destination}" Value="{x:Null}">
-                                                        <Setter Property="Visibility" Value="Collapsed"/>
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </Button.Style>
-                                    </Button>
-                                </StackPanel>
-                            </Grid>
-                        </Border>
-
-                        <!-- Hop List -->
-                        <Border Grid.Row="1" Margin="24,0,24,12" CornerRadius="8" Background="{StaticResource PrimaryDarkBrush}" BorderBrush="{StaticResource BorderDarkBrush}" BorderThickness="1" ClipToBounds="True">
-                            <Grid>
-                                <Border x:Name="TraceGridMask" Background="{StaticResource PrimaryDarkBrush}" CornerRadius="8"/>
-                                <Border CornerRadius="8" Background="{StaticResource PrimaryDarkBrush}">
-                                    <Border.OpacityMask>
-                                        <VisualBrush Visual="{Binding ElementName=TraceGridMask}"/>
-                                    </Border.OpacityMask>
-                                    <DataGrid x:Name="TraceHopsGrid" ItemsSource="{Binding Hops}" AutoGenerateColumns="False" IsReadOnly="True" Background="Transparent" BorderThickness="0">
-                                        <DataGrid.Columns>
-                                            <DataGridTextColumn Header="Hop" Binding="{Binding HopNumber}" Width="50"/>
-                                            <DataGridTextColumn Header="Latency" Binding="{Binding Latency, StringFormat={}{0}ms}" Width="80">
-                                                <DataGridTextColumn.ElementStyle>
-                                                    <Style TargetType="TextBlock">
-                                                        <Setter Property="FontWeight" Value="Bold"/>
-                                                        <Setter Property="Foreground" Value="{StaticResource AccentCyanBrush}"/>
-                                                    </Style>
-                                                </DataGridTextColumn.ElementStyle>
-                                            </DataGridTextColumn>
-                                            <DataGridTextColumn Header="IP Address" Binding="{Binding IP}" Width="150"/>
-                                            <DataGridTextColumn Header="Hostname" Binding="{Binding Hostname}" Width="*"/>
-                                        </DataGrid.Columns>
-                                    </DataGrid>
-                                </Border>
-                            </Grid>
-                        </Border>
-
-                        <!-- Vertical Splitter -->
-                        <GridSplitter Grid.Row="2" Height="6" HorizontalAlignment="Stretch" VerticalAlignment="Center" 
-                                      Background="Transparent" BorderBrush="Transparent" Cursor="SizeNS"/>
-
-                        <!-- Mini History Chart -->
-                        <Border Grid.Row="3" Margin="24,0,24,24" CornerRadius="8" Background="{StaticResource CardDarkBrush}" BorderBrush="{StaticResource BorderDarkBrush}" BorderThickness="1" Padding="16">
-                            <Grid>
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="*"/>
-                                </Grid.RowDefinitions>
-                                <StackPanel Orientation="Horizontal" Margin="0,0,0,12" VerticalAlignment="Center">
-                                    <TextBlock Text="Performance Timeline" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center" Margin="0,0,16,0"/>
-                                    <Border Background="{StaticResource PrimaryDarkBrush}" CornerRadius="6" Padding="2" BorderBrush="{StaticResource BorderDarkBrush}" BorderThickness="1">
-                                        <StackPanel Orientation="Horizontal">
-                                            <RadioButton x:Name="RbInterval1m"  Content="1m"  Style="{StaticResource TimelineRadioButtonStyle}" Tag="1"   IsChecked="True" Click="Interval_Click"/>
-                                            <RadioButton x:Name="RbInterval5m"  Content="5m"  Style="{StaticResource TimelineRadioButtonStyle}" Tag="5"   Click="Interval_Click"/>
-                                            <RadioButton x:Name="RbInterval10m" Content="10m" Style="{StaticResource TimelineRadioButtonStyle}" Tag="10"  Click="Interval_Click"/>
-                                            <RadioButton x:Name="RbInterval1h"  Content="1h"  Style="{StaticResource TimelineRadioButtonStyle}" Tag="60"  Click="Interval_Click"/>
-                                            <RadioButton x:Name="RbInterval2h"  Content="2h"  Style="{StaticResource TimelineRadioButtonStyle}" Tag="120" Click="Interval_Click"/>
-                                        </StackPanel>
-                                    </Border>
-                                    
-                                    <ToggleButton x:Name="PauseBtn" IsChecked="{Binding IsPaused, Mode=TwoWay}"
-                                                  Padding="12,4" Margin="12,0,0,0"
-                                                  Cursor="Hand">
-                                         <ToggleButton.Style>
-                                             <Style TargetType="ToggleButton" BasedOn="{StaticResource TimelineToggleButtonStyle}">
-                                                 <Setter Property="Content" Value="⏸ Pause"/>
-                                                 <Style.Triggers>
-                                                     <Trigger Property="IsChecked" Value="True">
-                                                         <Setter Property="Content" Value="▶ Resume"/>
-                                                         <Setter Property="Foreground" Value="{StaticResource OnlineGreenBrush}"/>
-                                                     </Trigger>
-                                                 </Style.Triggers>
-                                             </Style>
-                                         </ToggleButton.Style>
-                                     </ToggleButton>
-
-                                    <!-- Back to Live button — only visible when chart is panned -->
-                                    <Button x:Name="BackToLiveBtn"
-                                            Content="↩ Live"
-                                            Padding="12,4" Margin="8,0,0,0"
-                                            Cursor="Hand"
-                                            Click="BackToLiveBtn_Click"
-                                            Visibility="{Binding IsLive, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
-                                        <Button.Style>
-                                            <Style TargetType="Button" BasedOn="{StaticResource GhostButton}">
-                                                <Setter Property="Foreground" Value="{StaticResource AccentCyanBrush}"/>
-                                                <Setter Property="BorderBrush" Value="{StaticResource AccentCyanBrush}"/>
-                                            </Style>
-                                        </Button.Style>
-                                    </Button>
-                                </StackPanel>
-                                
-                                <Grid Grid.Row="1">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="40"/>
-                                        <ColumnDefinition Width="*"/>
-                                    </Grid.ColumnDefinitions>
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="*"/>
-                                        <RowDefinition Height="16"/>
-                                    </Grid.RowDefinitions>
-
-                                    <!-- Y-Axis Labels -->
-                                    <Grid Grid.Column="0" Grid.Row="0">
-                                        <TextBlock Text="{Binding MaxLatencyValue, StringFormat={}{0:F0}}" FontSize="10" VerticalAlignment="Top" HorizontalAlignment="Right" Margin="0,0,8,0" Foreground="{StaticResource TextSecondaryBrush}"/>
-                                        <TextBlock Text="0" FontSize="10" VerticalAlignment="Bottom" HorizontalAlignment="Right" Margin="0,0,8,0" Foreground="{StaticResource TextSecondaryBrush}"/>
-                                        <TextBlock Text="ms" FontSize="10" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,8,-20" Foreground="{StaticResource TextSecondaryBrush}" RenderTransformOrigin="0.5,0.5">
-                                            <TextBlock.RenderTransform>
-                                                <RotateTransform Angle="-90"/>
-                                            </TextBlock.RenderTransform>
-                                        </TextBlock>
-                                    </Grid>
-
-                                    <!-- Chart Area -->
-                                    <Border Grid.Column="1" Grid.Row="0" BorderBrush="{StaticResource BorderDarkBrush}" BorderThickness="1,0,0,1">
-                                        <Grid x:Name="ChartContainer" ClipToBounds="True" Background="Transparent" Cursor="Cross"
-                                              MouseMove="ChartContainer_MouseMove" MouseLeave="ChartContainer_MouseLeave"
-                                              MouseLeftButtonDown="ChartContainer_MouseLeftButtonDown"
-                                              MouseLeftButtonUp="ChartContainer_MouseLeftButtonUp">
-                                            <!-- Background Grid Lines -->
-                                            <Border BorderBrush="{StaticResource BorderDarkBrush}" BorderThickness="0,1,0,0" Height="1" VerticalAlignment="Center" Opacity="0.3"/>
-
-                                            <!-- High-Latency Threshold Visuals -->
-                                            <Canvas IsHitTestVisible="False">
-                                                <!-- Shadow/Zone above 100ms (top of chart) -->
-                                                <Rectangle Fill="{StaticResource ErrorRedBrush}" Opacity="0.05" Width="{Binding ActualWidth, ElementName=ChartContainer}">
-                                                    <Rectangle.Height>
-                                                        <MultiBinding Converter="{StaticResource LatencyToCoordinateConverter}">
-                                                            <Binding Source="100"/>
-                                                            <Binding Path="MaxLatencyValue"/>
-                                                            <Binding Path="ActualHeight" ElementName="ChartContainer"/>
-                                                        </MultiBinding>
-                                                    </Rectangle.Height>
-                                                </Rectangle>
-
-                                                <!-- 100ms Threshold Line -->
-                                                <Line X1="0" X2="{Binding ActualWidth, ElementName=ChartContainer}" Stroke="{StaticResource WarningOrangeBrush}" StrokeThickness="1" StrokeDashArray="4,4" Opacity="0.4">
-                                                    <Line.Y1>
-                                                        <MultiBinding Converter="{StaticResource LatencyToCoordinateConverter}">
-                                                            <Binding Source="100"/>
-                                                            <Binding Path="MaxLatencyValue"/>
-                                                            <Binding Path="ActualHeight" ElementName="ChartContainer"/>
-                                                        </MultiBinding>
-                                                    </Line.Y1>
-                                                    <Line.Y2>
-                                                        <Binding Path="Y1" RelativeSource="{RelativeSource Self}"/>
-                                                    </Line.Y2>
-                                                </Line>
-
-                                                <!-- Label for Threshold -->
-                                                <TextBlock Text="100ms Threshold" FontSize="9" Foreground="{StaticResource WarningOrangeBrush}" Opacity="0.6" Margin="4,-12,0,0">
-                                                    <Canvas.Top>
-                                                        <MultiBinding Converter="{StaticResource LatencyToCoordinateConverter}">
-                                                            <Binding Source="100"/>
-                                                            <Binding Path="MaxLatencyValue"/>
-                                                            <Binding Path="ActualHeight" ElementName="ChartContainer"/>
-                                                        </MultiBinding>
-                                                    </Canvas.Top>
-                                                </TextBlock>
-                                            </Canvas>
-                                            
-                                            <!-- The Line Chart -->
-                                            <Polyline x:Name="LatencyChartLine" StrokeThickness="0.8" StrokeLineJoin="Round" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
-                                                <Polyline.Stroke>
-                                                    <MultiBinding Converter="{StaticResource LatencyToBrushConverter}">
-                                                        <Binding Path="MaxLatencyValue"/>
-                                                        <Binding Path="FilteredHistory.Count"/>
-                                                    </MultiBinding>
-                                                </Polyline.Stroke>
-                                                <Polyline.Points>
-                                                    <MultiBinding Converter="{StaticResource LatencyToPointsConverter}">
-                                                        <Binding Path="FilteredHistory"/>
-                                                        <Binding Path="ActualWidth" ElementName="ChartContainer"/>
-                                                        <Binding Path="ActualHeight" ElementName="ChartContainer"/>
-                                                        <Binding Path="MaxLatencyValue"/>
-                                                        <Binding Path="ViewStart"/>
-                                                        <Binding Path="ViewEnd"/>
-                                                    </MultiBinding>
-                                                </Polyline.Points>
-                                            </Polyline>
-
-                                            <!-- High-Precision Tooltip -->
-                                            <Canvas IsHitTestVisible="False">
-                                                <Line x:Name="TooltipLine" Y1="0" Y2="{Binding ActualHeight, ElementName=ChartContainer}" Stroke="{StaticResource TextSecondaryBrush}" StrokeThickness="1" StrokeDashArray="2,2" Visibility="Collapsed"/>
-                                                <Border x:Name="TooltipPopup" Background="{StaticResource PrimaryDarkBrush}" BorderBrush="{StaticResource AccentCyanBrush}" BorderThickness="1" Padding="8,4" CornerRadius="4" Visibility="Collapsed">
+                                                <!-- Header: host name + stats + start/stop -->
+                                                <Grid Grid.Row="0" Margin="0,0,0,8">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
                                                     <StackPanel>
-                                                        <TextBlock x:Name="TooltipTime" Text="00:00:00" FontSize="10" Foreground="{StaticResource TextSecondaryBrush}"/>
-                                                        <TextBlock x:Name="TooltipLatency" Text="0ms" FontSize="11" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}"/>
+                                                        <TextBlock Text="{Binding Destination}" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}"/>
+                                                        <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                                            <TextBlock Text="{Binding Status}" FontSize="10" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                                            <TextBlock Text="  ·  " FontSize="10" Foreground="{StaticResource BorderDarkBrush}"/>
+                                                            <TextBlock Text="{Binding AverageLatency, StringFormat={}{0:F0}ms avg}" FontSize="10" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                                            <TextBlock Text="  ·  " FontSize="10" Foreground="{StaticResource BorderDarkBrush}"/>
+                                                            <TextBlock Text="{Binding PacketLoss, StringFormat={}{0:F1}% loss}" FontSize="10" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                                        </StackPanel>
                                                     </StackPanel>
-                                                </Border>
-                                            </Canvas>
-                                        </Grid>
-                                    </Border>
+                                                    <Button Grid.Column="1" Click="ToggleTraceCard_Click" Padding="12,5" FontSize="12" VerticalAlignment="Center">
+                                                        <Button.Style>
+                                                            <Style TargetType="Button" BasedOn="{StaticResource ScanButton}">
+                                                                <Setter Property="Content" Value="▶ Resume"/>
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding IsActive}" Value="True">
+                                                                        <Setter Property="Content" Value="■ Stop"/>
+                                                                        <Setter Property="Template">
+                                                                            <Setter.Value>
+                                                                                <ControlTemplate TargetType="Button">
+                                                                                    <Border x:Name="btnBorder" CornerRadius="8" Padding="{TemplateBinding Padding}" Background="{StaticResource ErrorRedBrush}">
+                                                                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                                                    </Border>
+                                                                                    <ControlTemplate.Triggers>
+                                                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                                                            <Setter TargetName="btnBorder" Property="Background" Value="{StaticResource ErrorRedDarkBrush}"/>
+                                                                                        </Trigger>
+                                                                                    </ControlTemplate.Triggers>
+                                                                                </ControlTemplate>
+                                                                            </Setter.Value>
+                                                                        </Setter>
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </Button.Style>
+                                                    </Button>
+                                                </Grid>
 
-                                    <!-- X-Axis Time Labels -->
-                                    <Grid Grid.Column="1" Grid.Row="1" Margin="0,3,0,0">
-                                        <TextBlock Text="{Binding XAxisStartLabel}" FontSize="9" Foreground="{StaticResource TextSecondaryBrush}" HorizontalAlignment="Left"/>
-                                        <TextBlock Text="{Binding XAxisMidLabel}"   FontSize="9" Foreground="{StaticResource TextSecondaryBrush}" HorizontalAlignment="Center"/>
-                                        <TextBlock Text="{Binding XAxisEndLabel}"   FontSize="9" Foreground="{StaticResource TextSecondaryBrush}" HorizontalAlignment="Right"/>
-                                    </Grid>
-                                </Grid>
-                            </Grid>
-                        </Border>
+                                                <!-- Controls: interval buttons + pause + back-to-live -->
+                                                <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,8">
+                                                    <Border Background="{StaticResource PrimaryDarkBrush}" CornerRadius="6" Padding="2"
+                                                            BorderBrush="{StaticResource BorderDarkBrush}" BorderThickness="1">
+                                                        <StackPanel Orientation="Horizontal">
+                                                            <RadioButton Content="1m" Tag="1" Click="Interval_Click">
+                                                                <RadioButton.Style>
+                                                                    <Style TargetType="RadioButton" BasedOn="{StaticResource TimelineRadioButtonStyle}">
+                                                                        <Style.Triggers>
+                                                                            <DataTrigger Binding="{Binding ChartIntervalMinutes}" Value="1">
+                                                                                <Setter Property="IsChecked" Value="True"/>
+                                                                            </DataTrigger>
+                                                                        </Style.Triggers>
+                                                                    </Style>
+                                                                </RadioButton.Style>
+                                                            </RadioButton>
+                                                            <RadioButton Content="5m" Tag="5" Click="Interval_Click">
+                                                                <RadioButton.Style>
+                                                                    <Style TargetType="RadioButton" BasedOn="{StaticResource TimelineRadioButtonStyle}">
+                                                                        <Style.Triggers>
+                                                                            <DataTrigger Binding="{Binding ChartIntervalMinutes}" Value="5">
+                                                                                <Setter Property="IsChecked" Value="True"/>
+                                                                            </DataTrigger>
+                                                                        </Style.Triggers>
+                                                                    </Style>
+                                                                </RadioButton.Style>
+                                                            </RadioButton>
+                                                            <RadioButton Content="10m" Tag="10" Click="Interval_Click">
+                                                                <RadioButton.Style>
+                                                                    <Style TargetType="RadioButton" BasedOn="{StaticResource TimelineRadioButtonStyle}">
+                                                                        <Style.Triggers>
+                                                                            <DataTrigger Binding="{Binding ChartIntervalMinutes}" Value="10">
+                                                                                <Setter Property="IsChecked" Value="True"/>
+                                                                            </DataTrigger>
+                                                                        </Style.Triggers>
+                                                                    </Style>
+                                                                </RadioButton.Style>
+                                                            </RadioButton>
+                                                            <RadioButton Content="1h" Tag="60" Click="Interval_Click">
+                                                                <RadioButton.Style>
+                                                                    <Style TargetType="RadioButton" BasedOn="{StaticResource TimelineRadioButtonStyle}">
+                                                                        <Style.Triggers>
+                                                                            <DataTrigger Binding="{Binding ChartIntervalMinutes}" Value="60">
+                                                                                <Setter Property="IsChecked" Value="True"/>
+                                                                            </DataTrigger>
+                                                                        </Style.Triggers>
+                                                                    </Style>
+                                                                </RadioButton.Style>
+                                                            </RadioButton>
+                                                            <RadioButton Content="2h" Tag="120" Click="Interval_Click">
+                                                                <RadioButton.Style>
+                                                                    <Style TargetType="RadioButton" BasedOn="{StaticResource TimelineRadioButtonStyle}">
+                                                                        <Style.Triggers>
+                                                                            <DataTrigger Binding="{Binding ChartIntervalMinutes}" Value="120">
+                                                                                <Setter Property="IsChecked" Value="True"/>
+                                                                            </DataTrigger>
+                                                                        </Style.Triggers>
+                                                                    </Style>
+                                                                </RadioButton.Style>
+                                                            </RadioButton>
+                                                        </StackPanel>
+                                                    </Border>
+                                                    <ToggleButton IsChecked="{Binding IsPaused, Mode=TwoWay}" Padding="10,4" Margin="8,0,0,0" Cursor="Hand">
+                                                        <ToggleButton.Style>
+                                                            <Style TargetType="ToggleButton" BasedOn="{StaticResource TimelineToggleButtonStyle}">
+                                                                <Setter Property="Content" Value="⏸ Pause"/>
+                                                                <Style.Triggers>
+                                                                    <Trigger Property="IsChecked" Value="True">
+                                                                        <Setter Property="Content" Value="▶ Resume"/>
+                                                                        <Setter Property="Foreground" Value="{StaticResource OnlineGreenBrush}"/>
+                                                                    </Trigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </ToggleButton.Style>
+                                                    </ToggleButton>
+                                                    <Button Content="↩ Live" Padding="10,4" Margin="6,0,0,0" Cursor="Hand"
+                                                            Click="BackToLiveBtn_Click"
+                                                            Visibility="{Binding IsLive, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
+                                                        <Button.Style>
+                                                            <Style TargetType="Button" BasedOn="{StaticResource GhostButton}">
+                                                                <Setter Property="Foreground" Value="{StaticResource AccentCyanBrush}"/>
+                                                                <Setter Property="BorderBrush" Value="{StaticResource AccentCyanBrush}"/>
+                                                            </Style>
+                                                        </Button.Style>
+                                                    </Button>
+                                                </StackPanel>
+
+                                                <!-- Chart area -->
+                                                <Grid Grid.Row="2">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="36"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                    </Grid.ColumnDefinitions>
+
+                                                    <!-- Y-Axis Labels -->
+                                                    <Grid Grid.Column="0">
+                                                        <TextBlock Text="{Binding MaxLatencyValue, StringFormat={}{0:F0}}" FontSize="9" VerticalAlignment="Top" HorizontalAlignment="Right" Margin="0,0,4,0" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                                        <TextBlock Text="0" FontSize="9" VerticalAlignment="Bottom" HorizontalAlignment="Right" Margin="0,0,4,0" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                                    </Grid>
+
+                                                    <!-- Chart Canvas -->
+                                                    <Border Grid.Column="1" BorderBrush="{StaticResource BorderDarkBrush}" BorderThickness="1,0,0,1">
+                                                        <Grid x:Name="ChartContainer" ClipToBounds="True" Background="Transparent" Cursor="Cross"
+                                                              MouseMove="ChartCard_MouseMove" MouseLeave="ChartCard_MouseLeave"
+                                                              MouseLeftButtonDown="ChartCard_MouseLeftButtonDown"
+                                                              MouseLeftButtonUp="ChartCard_MouseLeftButtonUp">
+                                                            <Border BorderBrush="{StaticResource BorderDarkBrush}" BorderThickness="0,1,0,0" Height="1" VerticalAlignment="Center" Opacity="0.3"/>
+                                                            <!-- Threshold zone -->
+                                                            <Canvas IsHitTestVisible="False">
+                                                                <Rectangle Fill="{StaticResource ErrorRedBrush}" Opacity="0.05"
+                                                                           Width="{Binding ActualWidth, ElementName=ChartContainer}">
+                                                                    <Rectangle.Height>
+                                                                        <MultiBinding Converter="{StaticResource LatencyToCoordinateConverter}">
+                                                                            <Binding Source="100"/>
+                                                                            <Binding Path="MaxLatencyValue"/>
+                                                                            <Binding Path="ActualHeight" ElementName="ChartContainer"/>
+                                                                        </MultiBinding>
+                                                                    </Rectangle.Height>
+                                                                </Rectangle>
+                                                                <Line X1="0" X2="{Binding ActualWidth, ElementName=ChartContainer}"
+                                                                      Stroke="{StaticResource WarningOrangeBrush}" StrokeThickness="1" StrokeDashArray="4,4" Opacity="0.4">
+                                                                    <Line.Y1>
+                                                                        <MultiBinding Converter="{StaticResource LatencyToCoordinateConverter}">
+                                                                            <Binding Source="100"/>
+                                                                            <Binding Path="MaxLatencyValue"/>
+                                                                            <Binding Path="ActualHeight" ElementName="ChartContainer"/>
+                                                                        </MultiBinding>
+                                                                    </Line.Y1>
+                                                                    <Line.Y2><Binding Path="Y1" RelativeSource="{RelativeSource Self}"/></Line.Y2>
+                                                                </Line>
+                                                                <TextBlock Text="100ms" FontSize="8" Foreground="{StaticResource WarningOrangeBrush}" Opacity="0.6" Margin="4,-11,0,0">
+                                                                    <Canvas.Top>
+                                                                        <MultiBinding Converter="{StaticResource LatencyToCoordinateConverter}">
+                                                                            <Binding Source="100"/>
+                                                                            <Binding Path="MaxLatencyValue"/>
+                                                                            <Binding Path="ActualHeight" ElementName="ChartContainer"/>
+                                                                        </MultiBinding>
+                                                                    </Canvas.Top>
+                                                                </TextBlock>
+                                                            </Canvas>
+                                                            <!-- Line chart -->
+                                                            <Polyline StrokeThickness="0.8" StrokeLineJoin="Round"
+                                                                      HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                                                                <Polyline.Stroke>
+                                                                    <MultiBinding Converter="{StaticResource LatencyToBrushConverter}">
+                                                                        <Binding Path="MaxLatencyValue"/>
+                                                                        <Binding Path="FilteredHistory.Count"/>
+                                                                    </MultiBinding>
+                                                                </Polyline.Stroke>
+                                                                <Polyline.Points>
+                                                                    <MultiBinding Converter="{StaticResource LatencyToPointsConverter}">
+                                                                        <Binding Path="FilteredHistory"/>
+                                                                        <Binding Path="ActualWidth" ElementName="ChartContainer"/>
+                                                                        <Binding Path="ActualHeight" ElementName="ChartContainer"/>
+                                                                        <Binding Path="MaxLatencyValue"/>
+                                                                        <Binding Path="ViewStart"/>
+                                                                        <Binding Path="ViewEnd"/>
+                                                                    </MultiBinding>
+                                                                </Polyline.Points>
+                                                            </Polyline>
+                                                            <!-- Hover tooltip -->
+                                                            <Canvas IsHitTestVisible="False">
+                                                                <Line x:Name="ChartTooltipLine"
+                                                                      Y1="0" Y2="{Binding ActualHeight, ElementName=ChartContainer}"
+                                                                      Stroke="{StaticResource TextSecondaryBrush}" StrokeThickness="1"
+                                                                      StrokeDashArray="2,2" Visibility="Collapsed"/>
+                                                                <Border x:Name="ChartTooltipPopup"
+                                                                        Background="{StaticResource PrimaryDarkBrush}"
+                                                                        BorderBrush="{StaticResource AccentCyanBrush}" BorderThickness="1"
+                                                                        Padding="8,4" CornerRadius="4" Visibility="Collapsed">
+                                                                    <StackPanel>
+                                                                        <TextBlock x:Name="ChartTooltipTime" Text="00:00:00" FontSize="10"
+                                                                                   Foreground="{StaticResource TextSecondaryBrush}"/>
+                                                                        <TextBlock x:Name="ChartTooltipLatency" Text="0ms" FontSize="11"
+                                                                                   FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}"/>
+                                                                    </StackPanel>
+                                                                </Border>
+                                                            </Canvas>
+                                                        </Grid>
+                                                    </Border>
+                                                </Grid>
+
+                                                <!-- X-Axis Time Labels -->
+                                                <Grid Grid.Row="3" Margin="36,3,0,0">
+                                                    <TextBlock Text="{Binding XAxisStartLabel}" FontSize="9" HorizontalAlignment="Left" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                                    <TextBlock Text="{Binding XAxisMidLabel}"   FontSize="9" HorizontalAlignment="Center" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                                    <TextBlock Text="{Binding XAxisEndLabel}"   FontSize="9" HorizontalAlignment="Right" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                                </Grid>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
                     </Grid>
                 </Grid>
             </TabItem>
