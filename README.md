@@ -1,6 +1,7 @@
 <img width="1913" height="1027" alt="image" src="https://github.com/user-attachments/assets/d96c2b5e-f0db-4192-a6b3-78fd3cf870ee" />
 <img width="1915" height="629" alt="image" src="https://github.com/user-attachments/assets/ae6ceb76-0d73-45f5-9d7f-1cd6fb8f13cc" />
-<img width="1917" height="1003" alt="image" src="https://github.com/user-attachments/assets/b2109585-7b33-479a-b404-0ed0033b9f8e" />
+<img width="1529" height="918" alt="image" src="https://github.com/user-attachments/assets/bbe6d598-ae1d-47d5-8a0c-ec33c7f0b492" />
+
 
 
 # Simple IP Scanner & DNS Benchmark
