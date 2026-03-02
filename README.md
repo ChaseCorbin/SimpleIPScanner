@@ -5,9 +5,9 @@
 
 # Simple IP Scanner & DNS Benchmark
 
-A modern, high-performance WPF application for network discovery, DNS performance testing, and visual traceroute monitoring.
+A modern, high-performance WPF application for network discovery, DNS performance testing, visual traceroute monitoring, and live packet capture analysis.
 
-![Version](https://img.shields.io/badge/Version-1.6.1-10B981)
+![Version](https://img.shields.io/badge/Version-2.0.0-10B981)
 ![Platform](https://img.shields.io/badge/Platform-Windows-0078d4)
 ![Framework](https://img.shields.io/badge/Framework-.NET%208-512bd4)
 
@@ -58,6 +58,13 @@ Once installed, the app silently checks for new releases on startup. When an upd
 - **Multi-Target**: Add any number of hosts and monitor them in parallel.
 - **Packet Loss & Jitter**: Track packet loss percentage and average latency per session.
 
+### 📡 Packet Capture & Analysis
+- **Live Top Talkers**: Captures traffic on any network interface in real time and ranks hosts by total bandwidth consumed — see who is using the most traffic at a glance.
+- **Auto-Detect Primary Interface**: The interface dropdown automatically identifies and pre-selects the active NIC (the one with a default gateway), marked with a ★ Primary badge alongside its IP address.
+- **Protocol Breakdown**: Click the expand arrow on any host row to reveal a per-protocol breakdown (TCP/UDP/ICMP and service names like HTTPS, DNS, SMB) with a relative bandwidth bar for each — capped at the top 8 protocols for a clean overview.
+- **Export for AI Analysis**: Export the full capture session to a structured JSON file — includes capture metadata, every host's byte counts, and the complete protocol breakdown per host. Designed to be pasted directly into an AI assistant for deeper traffic analysis.
+- **Npcap Detection**: Requires [Npcap](https://npcap.com) (free, by the Nmap Project). If Npcap is not installed, an in-app banner prompts the user with a direct download link rather than blocking the rest of the app.
+
 ### ⚙️ Settings
 - **About**: View the current app version and open the GitHub repository.
 - **Auto-Update Toggle**: Enable or disable the startup update check. Manual "Check Now" always available regardless of the setting.
@@ -78,7 +85,7 @@ Once installed, the app silently checks for new releases on startup. When an upd
 Requires the `vpk` CLI (one-time setup: `dotnet tool install -g vpk`).
 
 ```powershell
-.\publish_release.ps1 -Version "1.6.0" -GitHubToken "ghp_xxxx"
+.\publish_release.ps1 -Version "2.0.0" -GitHubToken "ghp_xxxx"
 ```
 
 This publishes a self-contained build, packages it with Velopack (`vpk pack`), and uploads the installer and update feed to GitHub Releases (`vpk upload github`). Output goes to `bin\Release\VelopackOutput\`.
@@ -88,11 +95,20 @@ This publishes a self-contained build, packages it with Velopack (`vpk pack`), a
 - **UI Framework**: WPF (Windows Presentation Foundation)
 - **Runtime**: .NET 8 (self-contained)
 - **Networking**: `System.Net.Sockets`, `System.Net.NetworkInformation`, `System.Net.Ping`
+- **Packet Capture**: [SharpPcap](https://github.com/dotpcap/sharppcap) + [PacketDotNet](https://github.com/dotpcap/packetnet) — live capture and packet parsing; requires [Npcap](https://npcap.com) at runtime
 - **Auto-Update**: [Velopack](https://velopack.io) — installer packaging and GitHub Releases update feed
 
 ---
 
 ## 📋 Changelog
+
+### v2.0.0
+- **Packet Capture & Analysis tab** — new dedicated tab for live network traffic capture powered by [SharpPcap](https://github.com/dotpcap/sharppcap) and [Npcap](https://npcap.com); requires Npcap to be installed (free, by the Nmap Project); an in-app banner with a direct download link is shown if Npcap is not detected
+- **Top Talkers view** — captures packets in promiscuous mode and ranks all active hosts by total bandwidth in real time; updates every second with sent, received, total bytes, and packet count per host
+- **Primary interface auto-detection** — the interface picker scans for NICs with a default gateway and pre-selects the most likely active adapter, labeled with its IPv4 address and a ★ Primary badge
+- **Per-host protocol breakdown** — expand any host row to reveal a top-8 protocol overview (TCP/UDP/ICMP, with service names like HTTPS, DNS, RDP, SMB) and a proportional bandwidth bar per protocol; collapses cleanly without interfering with the grid's scroll behavior
+- **AI-ready JSON export** — the Export button saves a structured JSON file containing capture metadata (interface, start time, duration, total packets) and the full per-host breakdown including all protocol entries (not capped); intended for pasting into an AI assistant for deeper traffic analysis
+- **Traceroute memory and performance overhaul** — resolved a memory leak and UI lockup that occurred after several hours of continuous monitoring; root cause was an O(n²) WPF rendering loop where each incoming ping triggered N+1 chart redraws instead of one; fixed by replacing `ObservableCollection` with an atomic list swap (single `PropertyChanged` per update), reducing the ping rate from 5 per second to 1 per second (capping 2-hour history at 7,200 points instead of 36,000), and adding a hard point-count cap with efficient front-trimming via `RemoveRange`
 
 ### v1.6.1
 - **Multi-chart view** — all monitored traceroute targets now display their latency charts simultaneously on a single scrollable page; no longer need to click through each session individually

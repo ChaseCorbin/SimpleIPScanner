@@ -71,6 +71,9 @@ namespace SimpleIPScanner.Models
 
         public ObservableCollection<TraceHop> Hops { get; } = new();
 
+        // Hard cap: 7,200 points = 2 hours at 1 ping/sec.
+        private const int MaxHistoryPoints = 7_200;
+
         // History of latencies for the final hop. Stores up to 2 hours of data.
         public List<TraceDataPoint> LatencyHistory { get; } = new();
 
@@ -81,7 +84,11 @@ namespace SimpleIPScanner.Models
             set { _chartIntervalMinutes = value; OnPropertyChanged(nameof(ChartIntervalMinutes)); UpdateFilteredHistory(); OnPropertyChanged(nameof(FilteredHistory)); }
         }
 
-        public ObservableCollection<TraceDataPoint> FilteredHistory { get; } = new();
+        // Plain List — not ObservableCollection. OnPropertyChanged("FilteredHistory") fires ONCE
+        // per update instead of N+1 CollectionChanged events, eliminating the N² WPF rendering loop.
+        private List<TraceDataPoint> _filteredHistory = new();
+        public IReadOnlyList<TraceDataPoint> FilteredHistory => _filteredHistory;
+        public int FilteredHistoryCount => _filteredHistory.Count;
 
         public double MaxLatencyValue => FilteredHistory.Any() ? Math.Max(100, FilteredHistory.Max(p => p.Latency)) : 100;
         public double AverageLatency => FilteredHistory.Any(p => p.Latency >= 0) ? FilteredHistory.Where(p => p.Latency >= 0).Average(p => p.Latency) : 0;
@@ -107,15 +114,17 @@ namespace SimpleIPScanner.Models
 
             var start = ViewStart;
             var end = ViewEnd;
-            var data = LatencyHistory.Where(p => p.Timestamp >= start && p.Timestamp <= end).ToList();
 
-            FilteredHistory.Clear();
-            foreach (var d in data) FilteredHistory.Add(d);
+            // Atomic swap — no per-item CollectionChanged events; one PropertyChanged at the end.
+            _filteredHistory = LatencyHistory
+                .Where(p => p.Timestamp >= start && p.Timestamp <= end)
+                .ToList();
 
+            OnPropertyChanged(nameof(FilteredHistory));
+            OnPropertyChanged(nameof(FilteredHistoryCount));
             OnPropertyChanged(nameof(MaxLatencyValue));
             OnPropertyChanged(nameof(AverageLatency));
             OnPropertyChanged(nameof(PacketLoss));
-            OnPropertyChanged(nameof(FilteredHistory));
             OnPropertyChanged(nameof(ViewStart));
             OnPropertyChanged(nameof(ViewEnd));
             OnPropertyChanged(nameof(IsLive));
@@ -165,12 +174,21 @@ namespace SimpleIPScanner.Models
         {
             LatencyHistory.Add(new TraceDataPoint { Timestamp = DateTime.Now, Latency = latency >= 0 ? (double)latency : -1.0 });
 
-            // Cleanup data older than 2 hours
-            var twoHrAgo = DateTime.Now.AddHours(-2);
-            if (LatencyHistory.Count > 0 && LatencyHistory[0].Timestamp < twoHrAgo)
+            // Trim time-expired entries from the front (data is chronological so scan from index 0).
+            // RemoveRange is used once the cutoff is found, avoiding a full-list predicate scan.
+            if (LatencyHistory.Count > 0 && LatencyHistory[0].Timestamp < DateTime.Now.AddHours(-2))
             {
-                LatencyHistory.RemoveAll(p => p.Timestamp < twoHrAgo);
+                int staleCount = 0;
+                var twoHrAgo = DateTime.Now.AddHours(-2);
+                while (staleCount < LatencyHistory.Count && LatencyHistory[staleCount].Timestamp < twoHrAgo)
+                    staleCount++;
+                if (staleCount > 0)
+                    LatencyHistory.RemoveRange(0, staleCount);
             }
+
+            // Hard cap: belt-and-suspenders guard against unexpected fast accumulation.
+            if (LatencyHistory.Count > MaxHistoryPoints)
+                LatencyHistory.RemoveRange(0, LatencyHistory.Count - MaxHistoryPoints);
 
             UpdateFilteredHistory();
         }

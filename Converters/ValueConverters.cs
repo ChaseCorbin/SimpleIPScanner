@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Linq;
 using System.Windows;
@@ -32,7 +31,7 @@ namespace SimpleIPScanner.Converters
     {
         public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
         {
-            if (values.Length < 3 || values[0] is not ObservableCollection<TraceDataPoint> history || values[1] is not double width || values[2] is not double height)
+            if (values.Length < 3 || values[0] is not IReadOnlyList<TraceDataPoint> history || values[1] is not double width || values[2] is not double height)
                 return new PointCollection();
 
             if (history.Count < 2) return new PointCollection();

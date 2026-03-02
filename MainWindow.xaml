@@ -6,7 +6,8 @@
         Width="1100" Height="750"
         MinWidth="900" MinHeight="600"
         WindowStartupLocation="CenterScreen"
-        Background="{StaticResource PrimaryDarkBrush}">
+        Background="{StaticResource PrimaryDarkBrush}"
+        Closing="MainWindow_Closing">
 
     <Grid>
         <Grid.RowDefinitions>
@@ -1119,7 +1120,7 @@
                                                                 <Polyline.Stroke>
                                                                     <MultiBinding Converter="{StaticResource LatencyToBrushConverter}">
                                                                         <Binding Path="MaxLatencyValue"/>
-                                                                        <Binding Path="FilteredHistory.Count"/>
+                                                                        <Binding Path="FilteredHistoryCount"/>
                                                                     </MultiBinding>
                                                                 </Polyline.Stroke>
                                                                 <Polyline.Points>
@@ -1168,6 +1169,324 @@
                             </ItemsControl>
                         </ScrollViewer>
                     </Grid>
+                </Grid>
+            </TabItem>
+
+            <!-- ═══════════════════════════════════════════════════════════════ -->
+            <!-- PACKET CAPTURE TAB                                              -->
+            <!-- ═══════════════════════════════════════════════════════════════ -->
+            <TabItem Header="Packet Capture" x:Name="PacketCaptureTab">
+                <Grid Background="{StaticResource PrimaryDarkBrush}">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>  <!-- Npcap banner -->
+                        <RowDefinition Height="Auto"/>  <!-- Toolbar -->
+                        <RowDefinition Height="*"/>     <!-- DataGrid -->
+                    </Grid.RowDefinitions>
+
+                    <!-- ── Npcap missing banner ──────────────────────────────── -->
+                    <Border x:Name="NpcapBanner" Grid.Row="0" Visibility="Collapsed"
+                            Background="#1A2744" BorderBrush="#2D4A8A"
+                            BorderThickness="0,0,0,1" Padding="20,12">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="⚠" FontSize="16"
+                                       Foreground="#5B9BD5" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <TextBlock Text="Npcap is required for packet capture"
+                                           FontSize="13" FontWeight="SemiBold"
+                                           Foreground="{StaticResource TextPrimaryBrush}"/>
+                                <TextBlock FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,2,0,0">
+                                    <Run Text="Download and install Npcap (free, by the Nmap Project), then restart the app."/>
+                                </TextBlock>
+                            </StackPanel>
+                            <Button Grid.Column="2" Content="Download Npcap ↗"
+                                    Click="DownloadNpcap_Click"
+                                    Style="{StaticResource GhostButton}"
+                                    FontSize="12" Padding="14,6" Margin="12,0,0,0"/>
+                        </Grid>
+                    </Border>
+
+                    <!-- ── Toolbar ────────────────────────────────────────────── -->
+                    <Border Grid.Row="1" Padding="16,12" Background="{StaticResource SecondaryDarkBrush}"
+                            BorderBrush="{StaticResource BorderDarkBrush}" BorderThickness="0,0,0,1">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="220"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <TextBlock Grid.Column="0" Text="Interface" FontSize="12"
+                                       Foreground="{StaticResource TextSecondaryBrush}"
+                                       VerticalAlignment="Center" Margin="0,0,10,0"/>
+
+                            <ComboBox x:Name="CaptureInterfaceCombo" Grid.Column="1"
+                                      VerticalAlignment="Center"
+                                      DisplayMemberPath="DisplayName"
+                                      SelectionChanged="CaptureInterfaceCombo_SelectionChanged"/>
+
+                            <Button x:Name="CaptureStartBtn" Grid.Column="2"
+                                    Content="▶  Start" Click="CaptureStart_Click"
+                                    Style="{StaticResource ScanButton}"
+                                    FontSize="12" Padding="16,6" Margin="12,0,0,0"/>
+
+                            <Button x:Name="CaptureStopBtn" Grid.Column="3"
+                                    Content="■  Stop" Click="CaptureStop_Click"
+                                    Style="{StaticResource StopButton}"
+                                    FontSize="12" Padding="16,6" Margin="8,0,0,0"
+                                    IsEnabled="False"/>
+
+                            <Button Grid.Column="4" Content="Clear"
+                                    Click="CaptureClear_Click"
+                                    Style="{StaticResource GhostButton}"
+                                    FontSize="12" Padding="14,6" Margin="8,0,0,0"/>
+
+                            <Button Grid.Column="5" Content="Export ↓"
+                                    Click="CaptureExport_Click"
+                                    Style="{StaticResource GhostButton}"
+                                    FontSize="12" Padding="14,6"
+                                    HorizontalAlignment="Right" Margin="0,0,16,0"/>
+
+                            <!-- Live stats -->
+                            <StackPanel Grid.Column="6" Orientation="Horizontal"
+                                        VerticalAlignment="Center">
+                                <TextBlock x:Name="CapturePacketsLabel"
+                                           Text="0 packets" FontSize="11"
+                                           Foreground="{StaticResource TextSecondaryBrush}"
+                                           VerticalAlignment="Center" Margin="0,0,16,0"/>
+                                <TextBlock x:Name="CaptureElapsedLabel"
+                                           Text="00:00:00" FontSize="11" FontFamily="Consolas"
+                                           Foreground="{StaticResource TextSecondaryBrush}"
+                                           VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <!-- ── Top Talkers DataGrid ──────────────────────────────── -->
+                    <Border Grid.Row="2" Margin="16" CornerRadius="8"
+                            BorderBrush="{StaticResource BorderDarkBrush}" BorderThickness="1"
+                            Background="{StaticResource CardDarkBrush}">
+                        <DataGrid x:Name="TalkersGrid"
+                                  AutoGenerateColumns="False"
+                                  IsReadOnly="True"
+                                  CanUserSortColumns="True"
+                                  CanUserResizeRows="False"
+                                  HeadersVisibility="Column"
+                                  GridLinesVisibility="Horizontal"
+                                  SelectionMode="Single"
+                                  Background="Transparent"
+                                  BorderThickness="0"
+                                  RowBackground="Transparent"
+                                  AlternatingRowBackground="#0DFFFFFF"
+                                  ClipToBounds="True"
+                                  RowDetailsVisibilityMode="Collapsed"
+                                  LoadingRow="TalkersGrid_LoadingRow">
+
+                            <!-- Per-row style: includes DataGridDetailsPresenter in the template
+                                 so the protocol panel can render. DetailsVisibility is managed
+                                 in code-behind via LoadingRow + ExpandChevron_Click. -->
+                            <DataGrid.RowStyle>
+                                <Style TargetType="DataGridRow">
+                                    <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+                                    <Setter Property="Template">
+                                        <Setter.Value>
+                                            <ControlTemplate TargetType="DataGridRow">
+                                                <Border x:Name="RowBorder"
+                                                        Background="{TemplateBinding Background}"
+                                                        SnapsToDevicePixels="True">
+                                                    <StackPanel>
+                                                        <DataGridCellsPresenter
+                                                            ItemsPanel="{TemplateBinding ItemsPanel}"
+                                                            SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
+                                                        <DataGridDetailsPresenter
+                                                            Visibility="{TemplateBinding DetailsVisibility}"
+                                                            SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
+                                                    </StackPanel>
+                                                </Border>
+                                                <ControlTemplate.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter TargetName="RowBorder" Property="Background"
+                                                                Value="{StaticResource RowHoverBrush}"/>
+                                                    </Trigger>
+                                                    <Trigger Property="IsSelected" Value="True">
+                                                        <Setter TargetName="RowBorder" Property="Background"
+                                                                Value="{StaticResource CardDarkBrush}"/>
+                                                    </Trigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+                                        </Setter.Value>
+                                    </Setter>
+                                </Style>
+                            </DataGrid.RowStyle>
+
+                            <!-- Protocol breakdown panel shown when a row is expanded -->
+                            <DataGrid.RowDetailsTemplate>
+                                <DataTemplate>
+                                    <!-- ItemsControl has no scroll logic — mouse-wheel passes
+                                         straight through to the outer DataGrid ScrollViewer. -->
+                                    <Border Background="#0A000000"
+                                            BorderBrush="{StaticResource BorderDarkBrush}"
+                                            BorderThickness="0,1,0,1"
+                                            Padding="52,8,20,10">
+                                        <StackPanel>
+                                            <TextBlock Text="TOP PROTOCOLS" FontSize="10" FontWeight="SemiBold"
+                                                       Foreground="{StaticResource TextSecondaryBrush}"
+                                                       Margin="0,0,0,8"/>
+                                            <ItemsControl ItemsSource="{Binding Protocols}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Grid Margin="0,3">
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="46"/>   <!-- protocol badge -->
+                                                                <ColumnDefinition Width="110"/>  <!-- service name -->
+                                                                <ColumnDefinition Width="124"/>  <!-- bar track -->
+                                                                <ColumnDefinition Width="76"/>   <!-- bytes -->
+                                                                <ColumnDefinition Width="*"/>    <!-- packets -->
+                                                            </Grid.ColumnDefinitions>
+
+                                                            <!-- Protocol badge -->
+                                                            <Border Grid.Column="0" CornerRadius="3" Padding="5,2"
+                                                                    Background="{StaticResource BorderDarkBrush}"
+                                                                    HorizontalAlignment="Left" VerticalAlignment="Center">
+                                                                <TextBlock Text="{Binding Protocol}"
+                                                                           FontSize="10" FontWeight="SemiBold"
+                                                                           Foreground="{StaticResource AccentCyanBrush}"/>
+                                                            </Border>
+
+                                                            <!-- Service / port label -->
+                                                            <TextBlock Grid.Column="1" Text="{Binding ServiceName}"
+                                                                       FontSize="11"
+                                                                       Foreground="{StaticResource TextPrimaryBrush}"
+                                                                       VerticalAlignment="Center" Margin="10,0,0,0"
+                                                                       TextTrimming="CharacterEllipsis"/>
+
+                                                            <!-- Relative bandwidth bar -->
+                                                            <Grid Grid.Column="2" Height="4"
+                                                                  VerticalAlignment="Center" Margin="8,0">
+                                                                <Rectangle Fill="{StaticResource BorderDarkBrush}"
+                                                                           HorizontalAlignment="Stretch" RadiusX="2" RadiusY="2"/>
+                                                                <Rectangle Width="{Binding BarWidth}" HorizontalAlignment="Left"
+                                                                           Fill="{StaticResource AccentCyanBrush}"
+                                                                           RadiusX="2" RadiusY="2"/>
+                                                            </Grid>
+
+                                                            <!-- Bytes -->
+                                                            <TextBlock Grid.Column="3" Text="{Binding BytesDisplay}"
+                                                                       FontSize="11"
+                                                                       Foreground="{StaticResource TextSecondaryBrush}"
+                                                                       VerticalAlignment="Center"/>
+
+                                                            <!-- Packets -->
+                                                            <TextBlock Grid.Column="4"
+                                                                       Text="{Binding Packets, StringFormat={}{0:N0} pkts}"
+                                                                       FontSize="10"
+                                                                       Foreground="{StaticResource TextSecondaryBrush}"
+                                                                       VerticalAlignment="Center" Margin="10,0,0,0"/>
+                                                        </Grid>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </DataGrid.RowDetailsTemplate>
+
+                            <DataGrid.Columns>
+                                <!-- Expand/collapse chevron -->
+                                <DataGridTemplateColumn Width="36" CanUserSort="False" CanUserResize="False">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <ToggleButton IsChecked="{Binding IsExpanded, Mode=TwoWay,
+                                                                      UpdateSourceTrigger=PropertyChanged}"
+                                                          Click="ExpandChevron_Click"
+                                                          Width="20" Height="20" Cursor="Hand"
+                                                          VerticalAlignment="Center" HorizontalAlignment="Center">
+                                                <ToggleButton.Style>
+                                                    <Style TargetType="ToggleButton">
+                                                        <Setter Property="Content" Value="▶"/>
+                                                        <Setter Property="FontSize" Value="9"/>
+                                                        <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
+                                                        <Setter Property="Background" Value="Transparent"/>
+                                                        <Setter Property="BorderThickness" Value="0"/>
+                                                        <Setter Property="Template">
+                                                            <Setter.Value>
+                                                                <ControlTemplate TargetType="ToggleButton">
+                                                                    <Border Background="Transparent">
+                                                                        <ContentPresenter HorizontalAlignment="Center"
+                                                                                          VerticalAlignment="Center"/>
+                                                                    </Border>
+                                                                </ControlTemplate>
+                                                            </Setter.Value>
+                                                        </Setter>
+                                                        <Style.Triggers>
+                                                            <Trigger Property="IsChecked" Value="True">
+                                                                <Setter Property="Content" Value="▼"/>
+                                                                <Setter Property="Foreground" Value="{StaticResource AccentCyanBrush}"/>
+                                                            </Trigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </ToggleButton.Style>
+                                            </ToggleButton>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+
+                                <!-- Rank -->
+                                <DataGridTextColumn Header="#" Binding="{Binding Rank}"
+                                                    Width="40" FontSize="11" CanUserSort="False"/>
+
+                                <!-- IP -->
+                                <DataGridTextColumn Header="IP Address" Binding="{Binding IP}"
+                                                    Width="140" FontSize="12"/>
+
+                                <!-- Hostname -->
+                                <DataGridTextColumn Header="Hostname" Binding="{Binding Hostname}"
+                                                    Width="*" FontSize="12"/>
+
+                                <!-- Packets -->
+                                <DataGridTextColumn Header="Packets" Binding="{Binding Packets, StringFormat={}{0:N0}}"
+                                                    Width="90" FontSize="12"/>
+
+                                <!-- Sent -->
+                                <DataGridTextColumn Header="Sent" Binding="{Binding SentDisplay}"
+                                                    Width="90" FontSize="12"/>
+
+                                <!-- Received -->
+                                <DataGridTextColumn Header="Received" Binding="{Binding ReceivedDisplay}"
+                                                    Width="90" FontSize="12"/>
+
+                                <!-- Total with bar -->
+                                <DataGridTemplateColumn Header="Total" Width="160" SortMemberPath="TotalBytes">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <Grid Margin="4,2">
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="4"/>
+                                                </Grid.RowDefinitions>
+                                                <TextBlock Grid.Row="0" Text="{Binding TotalDisplay}"
+                                                           FontSize="12" FontWeight="SemiBold"
+                                                           Foreground="{StaticResource TextPrimaryBrush}"/>
+                                                <Grid Grid.Row="1" Background="{StaticResource BorderDarkBrush}"
+                                                      Height="3" Margin="0,2,0,0">
+                                                    <Rectangle Width="{Binding BarWidth}" HorizontalAlignment="Left"
+                                                               Fill="{StaticResource AccentCyanBrush}" RadiusX="1.5" RadiusY="1.5"/>
+                                                </Grid>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </Border>
                 </Grid>
             </TabItem>
         </TabControl>

@@ -14,7 +14,11 @@ using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using System.Windows.Controls.Primitives;
 using System.Windows.Shapes;
+using System.Text.Json;
+using Microsoft.Win32;
+using SharpPcap;
 using SimpleIPScanner.Models;
 using SimpleIPScanner.Services;
 
@@ -59,6 +63,12 @@ namespace SimpleIPScanner
         private Brush? _tooltipOrangeBrush;
         private Brush? _tooltipGreenBrush;
 
+        // ── Packet Capture ────────────────────────────────────────────────────
+        private readonly PacketCaptureService _captureService = new();
+        private readonly ObservableCollection<TalkerEntry> _talkers = new();
+        private readonly Dictionary<string, string> _resolvedHosts = new();
+        private System.Windows.Threading.DispatcherTimer? _captureRefreshTimer;
+
         public MainWindow()
         {
             InitializeComponent();
@@ -77,6 +87,7 @@ namespace SimpleIPScanner
             TraceTargetsList.ItemsSource = _traceSessions;
             AllChartsControl.ItemsSource = _traceSessions;
             SubnetChipList.ItemsSource = _subnets;
+            TalkersGrid.ItemsSource = _talkers;
 
             // Auto-detect the primary subnet and add it to the scan list
             string detected = NetworkScanner.GetActiveSubnet();
@@ -103,6 +114,9 @@ namespace SimpleIPScanner
             // Fire-and-forget: silently check for a newer release in the background.
             if (_settings.AutoCheckUpdates)
                 _ = CheckForUpdateAsync();
+
+            // Initialize packet capture tab (checks Npcap, populates interface list)
+            InitPacketCaptureTab();
         }
 
         /// <summary>
@@ -639,7 +653,7 @@ namespace SimpleIPScanner
             var cts = new CancellationTokenSource();
             _traceCts[session] = cts;
 
-            // Loop 1: High-frequency latency monitoring (5 pings/sec)
+            // Loop 1: Latency monitoring (1 ping/sec — keeps 2-hour history at ~7,200 points)
             _ = Task.Run(async () =>
             {
                 var pingSender = new System.Net.NetworkInformation.Ping();
@@ -660,7 +674,7 @@ namespace SimpleIPScanner
                         Dispatcher.Invoke(() => session.AddDataPoint(-1));
                     }
 
-                    await Task.Delay(200, cts.Token);
+                    await Task.Delay(1000, cts.Token);
                 }
             }, cts.Token);
 
@@ -1137,6 +1151,381 @@ namespace SimpleIPScanner
         private void SettingsButton_Click(object sender, RoutedEventArgs e)
         {
             new SettingsWindow(_settings, _updateService) { Owner = this }.ShowDialog();
+        }
+
+        #endregion
+
+        #region Packet Capture
+
+        /// <summary>
+        /// Wraps an ILiveDevice with a richer display name that includes the
+        /// interface's IPv4 address and a "(Primary)" label when it has a default gateway.
+        /// </summary>
+        private sealed class CaptureDeviceInfo
+        {
+            public ILiveDevice Device     { get; }
+            public string      DisplayName { get; }
+            public bool        IsPrimary  { get; }
+
+            public CaptureDeviceInfo(ILiveDevice device, IReadOnlySet<string> gatewayIPs)
+            {
+                Device = device;
+
+                var ips = GetDeviceIPv4s(device);
+                IsPrimary = ips.Any(gatewayIPs.Contains);
+
+                string ipPart    = ips.Count > 0 ? $"  [{string.Join(", ", ips)}]" : "";
+                string badge     = IsPrimary ? "  ★ Primary" : "";
+                DisplayName      = device.Description + ipPart + badge;
+            }
+
+            private static List<string> GetDeviceIPv4s(ILiveDevice device)
+            {
+                if (device is SharpPcap.LibPcap.LibPcapLiveDevice libDev)
+                {
+                    return libDev.Addresses
+                        .Where(a => a.Addr?.ipAddress != null
+                                 && a.Addr.ipAddress.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork
+                                 && !IPAddress.IsLoopback(a.Addr.ipAddress))
+                        .Select(a => a.Addr!.ipAddress!.ToString())
+                        .ToList();
+                }
+                return new List<string>();
+            }
+        }
+
+        /// <summary>
+        /// Returns all IPv4 addresses belonging to NICs that have at least one default gateway.
+        /// These are reliably the "active" interfaces the user is actually routing traffic through.
+        /// </summary>
+        private static HashSet<string> GetGatewayInterfaceIPs()
+        {
+            return System.Net.NetworkInformation.NetworkInterface
+                .GetAllNetworkInterfaces()
+                .Where(n => n.OperationalStatus == System.Net.NetworkInformation.OperationalStatus.Up
+                         && n.NetworkInterfaceType != System.Net.NetworkInformation.NetworkInterfaceType.Loopback
+                         && n.GetIPProperties().GatewayAddresses.Any(g => g.Address.AddressFamily
+                                == System.Net.Sockets.AddressFamily.InterNetwork))
+                .SelectMany(n => n.GetIPProperties().UnicastAddresses
+                    .Where(a => a.Address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
+                    .Select(a => a.Address.ToString()))
+                .ToHashSet();
+        }
+
+        /// <summary>Called once at startup — checks Npcap availability and populates the interface list.</summary>
+        private void InitPacketCaptureTab()
+        {
+            if (!PacketCaptureService.IsPcapAvailable())
+            {
+                NpcapBanner.Visibility          = Visibility.Visible;
+                CaptureStartBtn.IsEnabled       = false;
+                CaptureInterfaceCombo.IsEnabled = false;
+                return;
+            }
+
+            NpcapBanner.Visibility = Visibility.Collapsed;
+
+            if (CaptureInterfaceCombo.Items.Count > 0) return;
+
+            var gatewayIPs = GetGatewayInterfaceIPs();
+            var infos = PacketCaptureService.GetDevices()
+                            .Select(d => new CaptureDeviceInfo(d, gatewayIPs))
+                            .ToList();
+
+            foreach (var info in infos)
+                CaptureInterfaceCombo.Items.Add(info);
+
+            // Auto-select the first primary interface; fall back to index 0
+            int best = infos.FindIndex(i => i.IsPrimary);
+            CaptureInterfaceCombo.SelectedIndex = best >= 0 ? best : 0;
+        }
+
+        private void CaptureInterfaceCombo_SelectionChanged(object sender, SelectionChangedEventArgs e) { }
+
+        private void CaptureStart_Click(object sender, RoutedEventArgs e)
+        {
+            if (CaptureInterfaceCombo.SelectedItem is not CaptureDeviceInfo info) return;
+            var device = info.Device;
+
+            _talkers.Clear();
+            _resolvedHosts.Clear();
+
+            try
+            {
+                _captureService.StartCapture(device);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to start capture: {ex.Message}\n\nMake sure Npcap is installed and try running as administrator.",
+                    "Capture Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            CaptureStartBtn.IsEnabled        = false;
+            CaptureStopBtn.IsEnabled         = true;
+            CaptureInterfaceCombo.IsEnabled  = false;
+
+            _captureRefreshTimer = new System.Windows.Threading.DispatcherTimer
+            {
+                Interval = TimeSpan.FromSeconds(1)
+            };
+            _captureRefreshTimer.Tick += CaptureRefreshTimer_Tick;
+            _captureRefreshTimer.Start();
+        }
+
+        private void CaptureStop_Click(object sender, RoutedEventArgs e)
+        {
+            _captureRefreshTimer?.Stop();
+            _captureService.StopCapture();
+
+            CaptureStartBtn.IsEnabled        = true;
+            CaptureStopBtn.IsEnabled         = false;
+            CaptureInterfaceCombo.IsEnabled  = true;
+        }
+
+        private void CaptureClear_Click(object sender, RoutedEventArgs e)
+        {
+            _captureService.Clear();
+            _talkers.Clear();
+            _resolvedHosts.Clear();
+            CapturePacketsLabel.Text  = "0 packets";
+            CaptureElapsedLabel.Text  = "00:00:00";
+        }
+
+        private void CaptureRefreshTimer_Tick(object? sender, EventArgs e)
+        {
+            // Update elapsed + packet count
+            var elapsed = DateTime.Now - _captureService.StartTime;
+            CaptureElapsedLabel.Text  = $"{(int)elapsed.TotalHours:D2}:{elapsed.Minutes:D2}:{elapsed.Seconds:D2}";
+            CapturePacketsLabel.Text  = $"{_captureService.TotalPackets:N0} packets";
+
+            var snapshot = _captureService.GetSnapshot();
+            long maxTotal = snapshot.Count > 0 ? (snapshot[0].BytesSent + snapshot[0].BytesReceived) : 1;
+            if (maxTotal == 0) maxTotal = 1;
+
+            const double maxBarWidth = 120.0;
+
+            for (int i = 0; i < snapshot.Count; i++)
+            {
+                var (ip, sent, recv, pkts) = snapshot[i];
+
+                // Find or create the entry
+                var entry = _talkers.FirstOrDefault(t => t.IP == ip);
+                if (entry == null)
+                {
+                    entry = new TalkerEntry { IP = ip, Hostname = ip };
+                    _talkers.Add(entry);
+                    // Kick off async hostname resolution
+                    ResolveHostnameAsync(ip, entry);
+                }
+
+                entry.Rank          = i + 1;
+                entry.BytesSent     = sent;
+                entry.BytesReceived = recv;
+                entry.Packets       = pkts;
+                entry.BarWidth      = (double)(sent + recv) / maxTotal * maxBarWidth;
+
+                // Refresh protocol breakdown only for expanded rows
+                if (entry.IsExpanded)
+                    RefreshProtocols(entry);
+            }
+
+            // Remove IPs that are no longer in the snapshot (e.g. after Clear)
+            var current = new HashSet<string>(snapshot.Select(s => s.IP));
+            for (int i = _talkers.Count - 1; i >= 0; i--)
+                if (!current.Contains(_talkers[i].IP))
+                    _talkers.RemoveAt(i);
+
+            // Re-sort the observable collection to match snapshot order
+            for (int i = 0; i < _talkers.Count; i++)
+            {
+                int desired = snapshot.FindIndex(s => s.IP == _talkers[i].IP);
+                if (desired >= 0 && desired != i)
+                {
+                    _talkers.Move(i, desired < _talkers.Count ? desired : _talkers.Count - 1);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Restores DetailsVisibility when a DataGridRow is created or recycled by virtualisation.
+        /// RowDetailsVisibilityMode="Collapsed" sets DetailsVisibility as a local value on load,
+        /// overriding any Style setter, so we must re-apply it here.
+        /// </summary>
+        private void TalkersGrid_LoadingRow(object sender, DataGridRowEventArgs e)
+        {
+            if (e.Row.DataContext is TalkerEntry entry)
+                e.Row.DetailsVisibility = entry.IsExpanded ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        /// <summary>
+        /// Propagates IsChecked → DetailsVisibility directly as a local value,
+        /// which wins over the DataGrid's automatic visibility management.
+        /// Also seeds protocol data immediately on first expand.
+        /// </summary>
+        private void ExpandChevron_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is not ToggleButton tb || tb.DataContext is not TalkerEntry entry) return;
+
+            var row = TalkersGrid.ItemContainerGenerator.ContainerFromItem(entry) as DataGridRow;
+            if (row == null) return;
+
+            bool expanded = tb.IsChecked == true;
+            row.DetailsVisibility = expanded ? Visibility.Visible : Visibility.Collapsed;
+
+            // Populate immediately on first expand rather than waiting for the next 1-second tick
+            if (expanded && entry.Protocols.Count == 0)
+                RefreshProtocols(entry);
+        }
+
+        private void RefreshProtocols(TalkerEntry entry)
+        {
+            var all = _captureService.GetProtocolSnapshot(entry.IP);
+
+            // Cap at top 8 — enough for a quick overview without overwhelming
+            if (all.Count > 8) all = all.GetRange(0, 8);
+
+            long maxBytes    = all.Count > 0 ? all[0].Bytes : 1;
+            if (maxBytes == 0) maxBytes = 1;
+            const double maxBarWidth = 110.0;
+
+            for (int i = 0; i < all.Count; i++)
+            {
+                var (proto, port, bytes, pkts) = all[i];
+
+                // For ICMP/other: show "—"; for known port: service name; for unknown: ":port"
+                string serviceName  = port == 0 ? "—" : PacketCaptureService.ServiceName(port);
+                string bytesDisplay = TalkerEntry.FormatBytes(bytes);
+                double barWidth     = (double)bytes / maxBytes * maxBarWidth;
+
+                if (i < entry.Protocols.Count)
+                {
+                    var ex = entry.Protocols[i];
+                    ex.Protocol     = proto;
+                    ex.ServiceName  = serviceName;
+                    ex.BytesDisplay = bytesDisplay;
+                    ex.Packets      = pkts;
+                    ex.BarWidth     = barWidth;
+                }
+                else
+                {
+                    entry.Protocols.Add(new Models.ProtocolStat
+                    {
+                        Protocol    = proto,
+                        ServiceName = serviceName,
+                        BytesDisplay = bytesDisplay,
+                        Packets     = pkts,
+                        BarWidth    = barWidth
+                    });
+                }
+            }
+
+            // Trim stale rows
+            while (entry.Protocols.Count > all.Count)
+                entry.Protocols.RemoveAt(entry.Protocols.Count - 1);
+        }
+
+        private async void ResolveHostnameAsync(string ip, TalkerEntry entry)
+        {
+            if (_resolvedHosts.TryGetValue(ip, out var cached))
+            {
+                entry.Hostname = cached;
+                return;
+            }
+            try
+            {
+                var hostEntry = await Dns.GetHostEntryAsync(ip);
+                string name = hostEntry.HostName;
+                _resolvedHosts[ip] = name;
+                entry.Hostname = name;
+            }
+            catch
+            {
+                _resolvedHosts[ip] = ip; // don't retry
+            }
+        }
+
+        private void CaptureExport_Click(object sender, RoutedEventArgs e)
+        {
+            if (_talkers.Count == 0)
+            {
+                MessageBox.Show("No capture data to export. Start a capture session first.",
+                    "Nothing to Export", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            var dlg = new SaveFileDialog
+            {
+                Title      = "Export Packet Capture",
+                Filter     = "JSON file (*.json)|*.json",
+                DefaultExt = ".json",
+                FileName   = $"capture_{DateTime.Now:yyyyMMdd_HHmmss}.json"
+            };
+            if (dlg.ShowDialog() != true) return;
+
+            string interfaceName = CaptureInterfaceCombo.SelectedItem is CaptureDeviceInfo info
+                ? info.DisplayName : "Unknown";
+
+            var export = new
+            {
+                captureInfo = new
+                {
+                    networkInterface = interfaceName,
+                    startTime        = _captureService.StartTime.ToString("yyyy-MM-dd HH:mm:ss"),
+                    duration         = CaptureElapsedLabel.Text,   // already formatted HH:MM:SS
+                    totalPackets     = _captureService.TotalPackets,
+                    exportedAt       = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
+                },
+                topTalkers = _talkers.Select(t =>
+                {
+                    // Export full protocol breakdown — not capped at 8 like the UI overview
+                    var protos = _captureService.GetProtocolSnapshot(t.IP);
+                    return new
+                    {
+                        rank              = t.Rank,
+                        ip                = t.IP,
+                        hostname          = t.Hostname,
+                        bytesSent         = t.BytesSent,
+                        bytesReceived     = t.BytesReceived,
+                        totalBytes        = t.TotalBytes,
+                        sentFormatted     = t.SentDisplay,
+                        receivedFormatted = t.ReceivedDisplay,
+                        totalFormatted    = t.TotalDisplay,
+                        packets           = t.Packets,
+                        protocols         = protos.Select(p => new
+                        {
+                            protocol       = p.Proto,
+                            service        = PacketCaptureService.ServiceName(p.Port),
+                            port           = p.Port,
+                            bytes          = p.Bytes,
+                            bytesFormatted = TalkerEntry.FormatBytes(p.Bytes),
+                            packets        = p.Packets
+                        }).ToList()
+                    };
+                }).ToList()
+            };
+
+            var json = JsonSerializer.Serialize(export,
+                new JsonSerializerOptions { WriteIndented = true });
+            System.IO.File.WriteAllText(dlg.FileName, json);
+
+            MessageBox.Show($"Exported {_talkers.Count} host{(_talkers.Count == 1 ? "" : "s")} to:\n{dlg.FileName}",
+                "Export Complete", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+
+        private void DownloadNpcap_Click(object sender, RoutedEventArgs e)
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = "https://npcap.com/#download",
+                UseShellExecute = true
+            });
+        }
+
+        private void MainWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            _captureRefreshTimer?.Stop();
+            _captureService.Dispose();
         }
 
         #endregion
