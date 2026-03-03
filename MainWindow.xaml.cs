@@ -58,10 +58,20 @@ namespace SimpleIPScanner
         // Per-chart-card drag state (keyed by the ChartContainer Grid instance)
         private readonly Dictionary<Grid, (bool isDragging, Point startPoint, DateTime startViewEnd)> _chartDragStates = new();
 
+        // Per-chart-card right-click zoom selection state
+        private readonly Dictionary<Grid, (bool isSelecting, double startX)> _chartZoomStates = new();
+
         // Cached tooltip brushes (initialised lazily on first hover)
         private Brush? _tooltipRedBrush;
         private Brush? _tooltipOrangeBrush;
         private Brush? _tooltipGreenBrush;
+
+        // ── Speed Test ────────────────────────────────────────────────────────
+        private readonly SpeedTestService _speedTestService = new();
+        private readonly SpeedTestSession _speedSession     = new();
+        private readonly ObservableCollection<PingServerResult> _speedPingResults = new();
+        private bool _isSpeedTesting;
+        private CancellationTokenSource? _speedCts;
 
         // ── Packet Capture ────────────────────────────────────────────────────
         private readonly PacketCaptureService _captureService = new();
@@ -117,6 +127,10 @@ namespace SimpleIPScanner
 
             // Initialize packet capture tab (checks Npcap, populates interface list)
             InitPacketCaptureTab();
+
+            // Speed Test tab wiring
+            SpeedTestRoot.DataContext  = _speedSession;
+            SpeedPingList.ItemsSource  = _speedPingResults;
         }
 
         /// <summary>
@@ -706,6 +720,12 @@ namespace SimpleIPScanner
                 session.ResetToLive();
         }
 
+        private void ResetZoomBtn_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is FrameworkElement fe && fe.DataContext is TraceSession session)
+                session.ResetZoom();
+        }
+
         // ── Per-card chart mouse interactions ──────────────────────────────────
 
         /// <summary>Walks the visual tree downward to find the first child of type T with a matching Name.</summary>
@@ -725,6 +745,7 @@ namespace SimpleIPScanner
         private void ChartCard_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
             if (sender is not Grid chart || chart.DataContext is not TraceSession session) return;
+            if (session.IsZoomed) return; // pan is disabled while zoomed; use Reset Zoom first
             _chartDragStates[chart] = (true, e.GetPosition(chart), session.ViewEnd);
             chart.CaptureMouse();
             chart.Cursor = Cursors.SizeWE;
@@ -739,11 +760,72 @@ namespace SimpleIPScanner
             chart.Cursor = Cursors.Cross;
         }
 
+        private void ChartCard_MouseRightButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            if (sender is not Grid chart || chart.DataContext is not TraceSession) return;
+            double startX = e.GetPosition(chart).X;
+            _chartZoomStates[chart] = (true, startX);
+            chart.CaptureMouse();
+
+            // Show the selection overlay at the click position (zero width initially)
+            if (FindChild<Canvas>(chart, "ZoomSelectionCanvas") is { } canvas)
+            {
+                canvas.Visibility = Visibility.Visible;
+                if (FindChild<System.Windows.Shapes.Rectangle>(chart, "ZoomSelectionRect") is { } rect)
+                {
+                    rect.Width = 0;
+                    System.Windows.Controls.Canvas.SetLeft(rect, startX);
+                }
+            }
+            e.Handled = true;
+        }
+
+        private void ChartCard_MouseRightButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            if (sender is not Grid chart || chart.DataContext is not TraceSession session) return;
+
+            _chartZoomStates.TryGetValue(chart, out var zs);
+            _chartZoomStates[chart] = (false, zs.startX);
+            chart.ReleaseMouseCapture();
+
+            // Hide the selection overlay
+            if (FindChild<Canvas>(chart, "ZoomSelectionCanvas") is { } canvas)
+                canvas.Visibility = Visibility.Collapsed;
+
+            if (!zs.isSelecting) return;
+
+            double endX = e.GetPosition(chart).X;
+            double left  = Math.Min(zs.startX, endX);
+            double right = Math.Max(zs.startX, endX);
+
+            // Ignore tiny selections (< 5 px) to prevent accidental zooms on plain right-clicks
+            if (right - left < 5) return;
+
+            // Map pixel X positions to timestamps
+            double windowSec = (session.ViewEnd - session.ViewStart).TotalSeconds;
+            if (windowSec <= 0 || chart.ActualWidth <= 0) return;
+
+            DateTime zoomStart = session.ViewStart + TimeSpan.FromSeconds(left  / chart.ActualWidth * windowSec);
+            DateTime zoomEnd   = session.ViewStart + TimeSpan.FromSeconds(right / chart.ActualWidth * windowSec);
+            session.ZoomTo(zoomStart, zoomEnd);
+
+            e.Handled = true;
+        }
+
         private void ChartCard_MouseLeave(object sender, MouseEventArgs e)
         {
             if (sender is not Grid chart) return;
             if (_chartDragStates.TryGetValue(chart, out var s))
                 _chartDragStates[chart] = (false, s.startPoint, s.startViewEnd);
+
+            // Cancel any in-progress zoom selection
+            if (_chartZoomStates.TryGetValue(chart, out var zs) && zs.isSelecting)
+            {
+                _chartZoomStates[chart] = (false, zs.startX);
+                if (FindChild<Canvas>(chart, "ZoomSelectionCanvas") is { } canvas)
+                    canvas.Visibility = Visibility.Collapsed;
+            }
+
             chart.ReleaseMouseCapture();
             chart.Cursor = Cursors.Cross;
 
@@ -779,11 +861,31 @@ namespace SimpleIPScanner
                 return;
             }
 
+            // Right-click zoom selection in progress — update the selection rectangle
+            _chartZoomStates.TryGetValue(chart, out var zoom);
+            if (zoom.isSelecting)
+            {
+                if (FindChild<Canvas>(chart, "ZoomSelectionCanvas") is { } selCanvas &&
+                    FindChild<System.Windows.Shapes.Rectangle>(chart, "ZoomSelectionRect") is { } selRect)
+                {
+                    double left  = Math.Min(zoom.startX, mousePos.X);
+                    double width = Math.Abs(mousePos.X - zoom.startX);
+                    System.Windows.Controls.Canvas.SetLeft(selRect, left);
+                    selRect.Width = width;
+                }
+                tooltipLine.Visibility  = Visibility.Collapsed;
+                tooltipPopup.Visibility = Visibility.Collapsed;
+                return;
+            }
+
             if (!session.FilteredHistory.Any()) return;
+
+            // Use the actual visible window duration (respects zoom mode)
+            double totalSec    = (session.ViewEnd - session.ViewStart).TotalSeconds;
+            if (totalSec <= 0) return;
 
             // Map mouse X → nearest data point
             double xRatio       = mousePos.X / chart.ActualWidth;
-            double totalSec     = session.ChartIntervalMinutes * 60.0;
             DateTime mouseTime  = session.ViewStart + TimeSpan.FromSeconds(xRatio * totalSec);
 
             var nearest = session.FilteredHistory
@@ -1151,6 +1253,113 @@ namespace SimpleIPScanner
         private void SettingsButton_Click(object sender, RoutedEventArgs e)
         {
             new SettingsWindow(_settings, _updateService) { Owner = this }.ShowDialog();
+        }
+
+        #endregion
+
+        #region Speed Test
+
+        private async void StartSpeedTest_Click(object sender, RoutedEventArgs e)
+        {
+            if (_isSpeedTesting) return;
+
+            // Parse duration from ComboBox
+            int seconds = 10;
+            if (SpeedDurationCombo.SelectedItem is ComboBoxItem item &&
+                int.TryParse(item.Tag?.ToString(), out int d))
+                seconds = d;
+
+            _isSpeedTesting = true;
+            _speedCts       = new CancellationTokenSource();
+            var ct          = _speedCts.Token;
+
+            StartSpeedTestBtn.Visibility = Visibility.Collapsed;
+            StopSpeedTestBtn.Visibility  = Visibility.Visible;
+
+            _speedSession.Reset();
+            _speedSession.TestSeconds = seconds;
+            _speedPingResults.Clear();
+
+            try
+            {
+                // ── Phase 1: Ping servers (~2 s) ──────────────────────────────
+                _speedSession.Phase    = "Pinging servers…";
+                _speedSession.Progress = 5;
+
+                var pingResults = await _speedTestService.PingServersAsync(ct);
+
+                Dispatcher.Invoke(() =>
+                {
+                    _speedPingResults.Clear();
+                    foreach (var r in pingResults) _speedPingResults.Add(r);
+
+                    long best = -1;
+                    foreach (var r in pingResults)
+                        if (r.Latency >= 0 && (best < 0 || r.Latency < best))
+                            best = r.Latency;
+                    _speedSession.BestPingMs = best;
+                });
+
+                if (ct.IsCancellationRequested) return;
+
+                // ── Phase 2: Download ──────────────────────────────────────────
+                _speedSession.Phase    = "Testing download…";
+                _speedSession.Progress = 10;
+
+                var downloadSw = System.Diagnostics.Stopwatch.StartNew();
+                await _speedTestService.RunDownloadAsync(seconds, mbps =>
+                {
+                    Dispatcher.Invoke(() =>
+                    {
+                        _speedSession.AddDownloadSample(mbps);
+                        int elapsed = (int)downloadSw.Elapsed.TotalSeconds;
+                        _speedSession.Progress = 10 + (int)(Math.Min(elapsed, seconds) * 45.0 / seconds);
+                    });
+                }, ct);
+
+                if (ct.IsCancellationRequested) return;
+
+                // ── Phase 3: Upload ────────────────────────────────────────────
+                _speedSession.Phase    = "Testing upload…";
+                _speedSession.Progress = 55;
+
+                var uploadSw = System.Diagnostics.Stopwatch.StartNew();
+                await _speedTestService.RunUploadAsync(seconds, mbps =>
+                {
+                    Dispatcher.Invoke(() =>
+                    {
+                        _speedSession.AddUploadSample(mbps);
+                        int elapsed = (int)uploadSw.Elapsed.TotalSeconds;
+                        _speedSession.Progress = 55 + (int)(Math.Min(elapsed, seconds) * 45.0 / seconds);
+                    });
+                }, ct);
+
+                _speedSession.Phase    = "Done";
+                _speedSession.Progress = 100;
+            }
+            catch (OperationCanceledException)
+            {
+                _speedSession.Phase    = "Stopped";
+                _speedSession.Progress = 0;
+            }
+            catch (Exception ex)
+            {
+                _speedSession.Phase    = $"Error: {ex.Message}";
+                _speedSession.Progress = 0;
+            }
+            finally
+            {
+                _isSpeedTesting = false;
+                _speedCts?.Dispose();
+                _speedCts = null;
+                StartSpeedTestBtn.Visibility = Visibility.Visible;
+                StopSpeedTestBtn.Visibility  = Visibility.Collapsed;
+            }
+        }
+
+        private void StopSpeedTest_Click(object sender, RoutedEventArgs e)
+        {
+            _speedCts?.Cancel();
         }
 
         #endregion

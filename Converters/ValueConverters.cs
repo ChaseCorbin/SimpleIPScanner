@@ -142,6 +142,42 @@ namespace SimpleIPScanner.Converters
     }
 
     /// <summary>
+    /// Converts a plain <c>List&lt;double&gt;</c> of Mbps samples to a WPF PointCollection
+    /// suitable for a Polyline chart. Higher values appear higher on the canvas (y=0 is top).
+    /// Inputs: history (IReadOnlyList&lt;double&gt;), width, height, maxVal.
+    /// </summary>
+    public class SpeedToPointsConverter : IMultiValueConverter
+    {
+        public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (values.Length < 4
+                || values[0] is not System.Collections.Generic.IReadOnlyList<double> history
+                || values[1] is not double width
+                || values[2] is not double height
+                || values[3] is not double maxVal
+                || history.Count < 2
+                || maxVal <= 0)
+                return new PointCollection();
+
+            var points = new PointCollection();
+            double xStep = width / (history.Count - 1);
+
+            for (int i = 0; i < history.Count; i++)
+            {
+                double x = i * xStep;
+                double y = height - (history[i] / maxVal * height);
+                y = Math.Max(0, Math.Min(height, y));
+                points.Add(new Point(x, y));
+            }
+
+            return points;
+        }
+
+        public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
+            => throw new NotSupportedException();
+    }
+
+    /// <summary>
     /// Converts a single hop latency (long ms) to a color brush.
     /// &lt; 0      → gray  (timeout / no response)
     /// 0–99    → green

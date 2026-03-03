@@ -44,6 +44,11 @@ namespace SimpleIPScanner.Models
         private bool _isPanned;
         private DateTime _pinnedViewEnd;
 
+        // Zoom state: when zoomed, the view shows a custom time range regardless of ChartIntervalMinutes
+        private bool _isZoomed;
+        private DateTime _zoomStart;
+        private DateTime _zoomEnd;
+
         public string Destination { get => _destination; set { _destination = value; OnPropertyChanged(nameof(Destination)); } }
         public bool IsActive { get => _isActive; set { _isActive = value; OnPropertyChanged(nameof(IsActive)); } }
         public string Status { get => _status; set { _status = value; OnPropertyChanged(nameof(Status)); } }
@@ -63,9 +68,10 @@ namespace SimpleIPScanner.Models
         }
 
         // The visible time window boundaries used by the chart and X-axis labels
-        public DateTime ViewEnd => _isPanned ? _pinnedViewEnd : DateTime.Now;
-        public DateTime ViewStart => ViewEnd.AddMinutes(-ChartIntervalMinutes);
-        public bool IsLive => !_isPanned;
+        public DateTime ViewEnd => _isZoomed ? _zoomEnd : (_isPanned ? _pinnedViewEnd : DateTime.Now);
+        public DateTime ViewStart => _isZoomed ? _zoomStart : ViewEnd.AddMinutes(-ChartIntervalMinutes);
+        public bool IsLive => !_isPanned && !_isZoomed;
+        public bool IsZoomed => _isZoomed;
 
         public string ElapsedDisplay => $"{(int)Elapsed.TotalHours:D2}:{Elapsed.Minutes:D2}:{Elapsed.Seconds:D2}";
 
@@ -167,7 +173,37 @@ namespace SimpleIPScanner.Models
         public void ResetToLive()
         {
             _isPanned = false;
+            _isZoomed = false;
             UpdateFilteredHistory();
+            OnPropertyChanged(nameof(IsZoomed));
+        }
+
+        /// <summary>
+        /// Zooms the chart view to an exact time range. Disables both live tracking and pan mode.
+        /// Minimum selection is 5 seconds; smaller selections are ignored.
+        /// </summary>
+        public void ZoomTo(DateTime start, DateTime end)
+        {
+            if ((end - start).TotalSeconds < 5) return;
+            _isZoomed = true;
+            _isPanned = false;
+            _zoomStart = start;
+            _zoomEnd = end;
+            UpdateFilteredHistory();
+            OnPropertyChanged(nameof(IsZoomed));
+        }
+
+        /// <summary>
+        /// Exits zoom mode, resets to live 5-minute view (the default interval).
+        /// </summary>
+        public void ResetZoom()
+        {
+            _isZoomed = false;
+            _isPanned = false;
+            _chartIntervalMinutes = 5;
+            UpdateFilteredHistory();
+            OnPropertyChanged(nameof(IsZoomed));
+            OnPropertyChanged(nameof(ChartIntervalMinutes));
         }
 
         public void AddDataPoint(long latency)

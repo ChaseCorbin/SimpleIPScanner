@@ -11,6 +11,7 @@
         <conv:LatencyToCoordinateConverter x:Key="LatencyToCoordinateConverter"/>
         <conv:LatencyToBrushConverter x:Key="LatencyToBrushConverter"/>
         <conv:HopLatencyColorConverter x:Key="HopLatencyColorConverter"/>
+        <conv:SpeedToPointsConverter x:Key="SpeedToPointsConverter"/>
         <!-- ============================================ -->
         <!-- GLOBAL COLOR PALETTE                         -->
         <!-- ============================================ -->

@@ -1059,6 +1059,16 @@
                                                             </Style>
                                                         </Button.Style>
                                                     </Button>
+                                                    <Button Content="⊟ Reset Zoom" Padding="10,4" Margin="6,0,0,0" Cursor="Hand"
+                                                            Click="ResetZoomBtn_Click"
+                                                            Visibility="{Binding IsZoomed, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                        <Button.Style>
+                                                            <Style TargetType="Button" BasedOn="{StaticResource GhostButton}">
+                                                                <Setter Property="Foreground" Value="{StaticResource WarningOrangeBrush}"/>
+                                                                <Setter Property="BorderBrush" Value="{StaticResource WarningOrangeBrush}"/>
+                                                            </Style>
+                                                        </Button.Style>
+                                                    </Button>
                                                 </StackPanel>
 
                                                 <!-- Chart area -->
@@ -1079,7 +1089,9 @@
                                                         <Grid x:Name="ChartContainer" ClipToBounds="True" Background="Transparent" Cursor="Cross"
                                                               MouseMove="ChartCard_MouseMove" MouseLeave="ChartCard_MouseLeave"
                                                               MouseLeftButtonDown="ChartCard_MouseLeftButtonDown"
-                                                              MouseLeftButtonUp="ChartCard_MouseLeftButtonUp">
+                                                              MouseLeftButtonUp="ChartCard_MouseLeftButtonUp"
+                                                              MouseRightButtonDown="ChartCard_MouseRightButtonDown"
+                                                              MouseRightButtonUp="ChartCard_MouseRightButtonUp">
                                                             <Border BorderBrush="{StaticResource BorderDarkBrush}" BorderThickness="0,1,0,0" Height="1" VerticalAlignment="Center" Opacity="0.3"/>
                                                             <!-- Threshold zone -->
                                                             <Canvas IsHitTestVisible="False">
@@ -1151,6 +1163,15 @@
                                                                                    FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}"/>
                                                                     </StackPanel>
                                                                 </Border>
+                                                            </Canvas>
+                                                            <!-- Right-click zoom selection overlay -->
+                                                            <Canvas x:Name="ZoomSelectionCanvas" IsHitTestVisible="False" Visibility="Collapsed">
+                                                                <Rectangle x:Name="ZoomSelectionRect"
+                                                                           Fill="{StaticResource AccentCyanBrush}" Opacity="0.15"
+                                                                           Stroke="{StaticResource AccentCyanBrush}" StrokeThickness="1"
+                                                                           StrokeDashArray="3,2"
+                                                                           Height="{Binding ActualHeight, ElementName=ChartContainer}"
+                                                                           Width="0"/>
                                                             </Canvas>
                                                         </Grid>
                                                     </Border>
@@ -1487,6 +1508,242 @@
                             </DataGrid.Columns>
                         </DataGrid>
                     </Border>
+                </Grid>
+            </TabItem>
+
+            <!-- ═══════════════════════════════════════════════════════════════ -->
+            <!-- SPEED TEST TAB                                                  -->
+            <!-- ═══════════════════════════════════════════════════════════════ -->
+            <TabItem Header="Speed Test">
+                <Grid x:Name="SpeedTestRoot" Background="{StaticResource PrimaryDarkBrush}">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- ── Header / Controls ─────────────────────────────────── -->
+                    <Border Grid.Row="0" Background="{StaticResource CardDarkBrush}"
+                            BorderBrush="{StaticResource BorderDarkBrush}" BorderThickness="0,0,0,1"
+                            Padding="24,16">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                <TextBlock Text="Internet Speed Test" FontSize="16" FontWeight="SemiBold"
+                                           Foreground="{StaticResource TextPrimaryBrush}"/>
+                                <TextBlock Text="Measures download and upload speeds using Cloudflare's test servers. Results may vary with network conditions."
+                                           FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"
+                                           Margin="0,4,0,0" TextWrapping="Wrap"/>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock Text="Duration:" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}"
+                                           VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <ComboBox x:Name="SpeedDurationCombo" Width="80" Style="{StaticResource ModernComboBox}"
+                                          Padding="10,6" Margin="0,0,12,0">
+                                    <ComboBoxItem Content="5 s"  Tag="5"/>
+                                    <ComboBoxItem Content="10 s" Tag="10" IsSelected="True"/>
+                                    <ComboBoxItem Content="20 s" Tag="20"/>
+                                </ComboBox>
+                                <Button x:Name="StartSpeedTestBtn" Content="▶ Run Test"
+                                        Style="{StaticResource ScanButton}" Padding="18,8" FontSize="13"
+                                        Click="StartSpeedTest_Click"/>
+                                <Button x:Name="StopSpeedTestBtn" Content="■ Stop"
+                                        Style="{StaticResource StopButton}" Padding="18,8" FontSize="13"
+                                        Click="StopSpeedTest_Click" Visibility="Collapsed"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <!-- ── Phase label + progress bar ─────────────────────────── -->
+                    <Border Grid.Row="1" Padding="24,10,24,8"
+                            Background="{StaticResource PrimaryDarkBrush}">
+                        <StackPanel>
+                            <TextBlock Text="{Binding Phase}" FontSize="11"
+                                       Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,6"/>
+                            <ProgressBar x:Name="SpeedProgressBar" Style="{StaticResource ModernProgressBar}"
+                                         Value="{Binding Progress}" Height="6"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- ── Main content: chart + stats ───────────────────────── -->
+                    <Grid Grid.Row="2" Margin="16,0,16,16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="220"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Chart area -->
+                        <Border Grid.Column="0" Background="{StaticResource CardDarkBrush}" CornerRadius="12"
+                                BorderBrush="{StaticResource BorderDarkBrush}" BorderThickness="1"
+                                Margin="0,8,8,0">
+                            <Grid Margin="16">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+
+                                <!-- Chart header + legend -->
+                                <Grid Grid.Row="0" Margin="0,0,0,10">
+                                    <TextBlock Text="Live Throughput" FontSize="12" FontWeight="SemiBold"
+                                               Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center"/>
+                                    <StackPanel HorizontalAlignment="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                                        <Rectangle Width="14" Height="2" Fill="{StaticResource AccentCyanBrush}"
+                                                   VerticalAlignment="Center" Margin="0,0,5,0"/>
+                                        <TextBlock Text="Download" FontSize="10" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,14,0"/>
+                                        <Rectangle Width="14" Height="2" Fill="{StaticResource WarningOrangeBrush}"
+                                                   VerticalAlignment="Center" Margin="0,0,5,0"/>
+                                        <TextBlock Text="Upload" FontSize="10" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                    </StackPanel>
+                                </Grid>
+
+                                <!-- Drawing area -->
+                                <Border Grid.Row="1" MinHeight="120"
+                                        BorderBrush="{StaticResource BorderDarkBrush}" BorderThickness="1,0,0,1">
+                                    <Grid x:Name="SpeedChartContainer" ClipToBounds="True" Background="Transparent">
+                                        <!-- 50% midline reference -->
+                                        <Border BorderBrush="{StaticResource BorderDarkBrush}" BorderThickness="0,1,0,0"
+                                                Height="1" VerticalAlignment="Center" Opacity="0.3"/>
+                                        <!-- Download polyline (cyan) -->
+                                        <Polyline StrokeThickness="1.5" StrokeLineJoin="Round"
+                                                  Stroke="{StaticResource AccentCyanBrush}"
+                                                  HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                                            <Polyline.Points>
+                                                <MultiBinding Converter="{StaticResource SpeedToPointsConverter}">
+                                                    <Binding Path="DownloadHistory"/>
+                                                    <Binding Path="ActualWidth"  ElementName="SpeedChartContainer"/>
+                                                    <Binding Path="ActualHeight" ElementName="SpeedChartContainer"/>
+                                                    <Binding Path="MaxChartMbps"/>
+                                                </MultiBinding>
+                                            </Polyline.Points>
+                                        </Polyline>
+                                        <!-- Upload polyline (orange) -->
+                                        <Polyline StrokeThickness="1.5" StrokeLineJoin="Round"
+                                                  Stroke="{StaticResource WarningOrangeBrush}"
+                                                  HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                                            <Polyline.Points>
+                                                <MultiBinding Converter="{StaticResource SpeedToPointsConverter}">
+                                                    <Binding Path="UploadHistory"/>
+                                                    <Binding Path="ActualWidth"  ElementName="SpeedChartContainer"/>
+                                                    <Binding Path="ActualHeight" ElementName="SpeedChartContainer"/>
+                                                    <Binding Path="MaxChartMbps"/>
+                                                </MultiBinding>
+                                            </Polyline.Points>
+                                        </Polyline>
+                                        <!-- Y-axis max label -->
+                                        <TextBlock Text="{Binding MaxChartMbps, StringFormat={}{0:F0} Mbps}"
+                                                   FontSize="9" Foreground="{StaticResource TextSecondaryBrush}"
+                                                   VerticalAlignment="Top" HorizontalAlignment="Left" Margin="4,2"/>
+                                    </Grid>
+                                </Border>
+
+                                <!-- X-axis labels -->
+                                <Grid Grid.Row="2" Margin="0,4,0,0">
+                                    <TextBlock Text="0s" FontSize="9" Foreground="{StaticResource TextSecondaryBrush}" HorizontalAlignment="Left"/>
+                                    <TextBlock Text="{Binding XAxisMidLabel}" FontSize="9" Foreground="{StaticResource TextSecondaryBrush}" HorizontalAlignment="Center"/>
+                                    <TextBlock Text="{Binding XAxisEndLabel}" FontSize="9" Foreground="{StaticResource TextSecondaryBrush}" HorizontalAlignment="Right"/>
+                                </Grid>
+                            </Grid>
+                        </Border>
+
+                        <!-- Stats panel -->
+                        <StackPanel Grid.Column="1" Margin="0,8,0,0">
+
+                            <!-- Download card -->
+                            <Border Background="{StaticResource CardDarkBrush}" CornerRadius="10"
+                                    BorderBrush="{StaticResource BorderDarkBrush}" BorderThickness="1"
+                                    Padding="14,12" Margin="0,0,0,8">
+                                <StackPanel>
+                                    <TextBlock Text="DOWNLOAD" FontSize="9" FontWeight="SemiBold"
+                                               Foreground="{StaticResource AccentCyanBrush}" Margin="0,0,0,6"/>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="{Binding DownloadDisplay}" FontSize="28"
+                                                   FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}"/>
+                                        <TextBlock Grid.Column="1" Text="Mbps" FontSize="11"
+                                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                                   VerticalAlignment="Bottom" Margin="4,0,0,4"/>
+                                    </Grid>
+                                    <TextBlock Text="{Binding PeakDownloadDisplay}" FontSize="10"
+                                               Foreground="{StaticResource TextSecondaryBrush}" Margin="0,2,0,0"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Upload card -->
+                            <Border Background="{StaticResource CardDarkBrush}" CornerRadius="10"
+                                    BorderBrush="{StaticResource BorderDarkBrush}" BorderThickness="1"
+                                    Padding="14,12" Margin="0,0,0,8">
+                                <StackPanel>
+                                    <TextBlock Text="UPLOAD" FontSize="9" FontWeight="SemiBold"
+                                               Foreground="{StaticResource WarningOrangeBrush}" Margin="0,0,0,6"/>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="{Binding UploadDisplay}" FontSize="28"
+                                                   FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}"/>
+                                        <TextBlock Grid.Column="1" Text="Mbps" FontSize="11"
+                                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                                   VerticalAlignment="Bottom" Margin="4,0,0,4"/>
+                                    </Grid>
+                                    <TextBlock Text="{Binding PeakUploadDisplay}" FontSize="10"
+                                               Foreground="{StaticResource TextSecondaryBrush}" Margin="0,2,0,0"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Best ping card -->
+                            <Border Background="{StaticResource CardDarkBrush}" CornerRadius="10"
+                                    BorderBrush="{StaticResource BorderDarkBrush}" BorderThickness="1"
+                                    Padding="14,12" Margin="0,0,0,12">
+                                <StackPanel>
+                                    <TextBlock Text="BEST PING" FontSize="9" FontWeight="SemiBold"
+                                               Foreground="{StaticResource OnlineGreenBrush}" Margin="0,0,0,6"/>
+                                    <TextBlock Text="{Binding PingDisplay}" FontSize="22" FontWeight="Bold"
+                                               Foreground="{StaticResource TextPrimaryBrush}"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Server latency breakdown -->
+                            <TextBlock Text="SERVER LATENCY" FontSize="9" FontWeight="SemiBold"
+                                       Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,6"/>
+                            <ItemsControl x:Name="SpeedPingList">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Margin="0,0,0,4" Padding="10,7"
+                                                Background="{StaticResource CardDarkBrush}" CornerRadius="7"
+                                                BorderBrush="{StaticResource BorderDarkBrush}" BorderThickness="1">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <StackPanel Grid.Column="0">
+                                                    <TextBlock Text="{Binding ServerName}" FontSize="11" FontWeight="SemiBold"
+                                                               Foreground="{StaticResource TextPrimaryBrush}"/>
+                                                    <TextBlock Text="{Binding IP}" FontSize="9"
+                                                               Foreground="{StaticResource TextSecondaryBrush}"/>
+                                                </StackPanel>
+                                                <Border Grid.Column="1" CornerRadius="4" Padding="7,3"
+                                                        Background="{StaticResource PrimaryDarkBrush}" VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding LatencyDisplay}" FontSize="10" FontWeight="SemiBold"
+                                                               Foreground="{Binding Latency, Converter={StaticResource HopLatencyColorConverter}}"/>
+                                                </Border>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </Grid>
                 </Grid>
             </TabItem>
         </TabControl>
