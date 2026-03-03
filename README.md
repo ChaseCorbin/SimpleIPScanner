@@ -9,7 +9,7 @@
 
 A modern, high-performance WPF application for network discovery, DNS performance testing, visual traceroute monitoring, live packet capture analysis, and internet speed testing.
 
-![Version](https://img.shields.io/badge/Version-2.1.1-10B981)
+![Version](https://img.shields.io/badge/Version-2.1.2-10B981)
 ![Platform](https://img.shields.io/badge/Platform-Windows-0078d4)
 ![Framework](https://img.shields.io/badge/Framework-.NET%208-512bd4)
 
@@ -68,7 +68,7 @@ Once installed, the app silently checks for new releases on startup. When an upd
 - **Npcap Detection**: Requires [Npcap](https://npcap.com) (free, by the Nmap Project). If Npcap is not installed, an in-app banner prompts the user with a direct download link rather than blocking the rest of the app.
 
 ### 🌐 Internet Speed Test
-- **Live Throughput Chart**: Real-time download and upload speed chart updating every 250 ms — cyan line for download, orange for upload.
+- **Live Throughput Chart**: Real-time download and upload speed chart updating every 250 ms — cyan line for download, orange for upload. Values are smoothed with a 1-second rolling average to filter per-chunk noise while staying responsive.
 - **Parallel TCP Streams**: Opens 8 concurrent connections (matching Ookla's methodology) to saturate the link and produce accurate readings rather than being throttled by a single TCP connection's congestion window.
 - **Progress Phases**: Clearly labeled test phases — Pinging → Download → Upload → Done — with a progress bar spanning the full run.
 - **Server Latency Breakdown**: Pings five well-known resolvers (Cloudflare, Google, Quad9, OpenDNS × 2) in parallel before the throughput test and displays best-of-3 latency for each.
@@ -118,6 +118,9 @@ This publishes a self-contained build, packages it with Velopack (`vpk pack`), a
 - **Parallel TCP streams** — speed test opens 8 concurrent connections (matching Ookla's methodology) instead of a single stream; a single TCP connection is throttled by its congestion window ÷ RTT and severely under-reports fast connections — parallel streams saturate the link accurately
 - **Cloudflare endpoint fix** — resolved HTTP 403 errors caused by missing CORS headers; requests to `speed.cloudflare.com` now include the required `Origin` and `Referer` headers
 - **Download fallback chain** — if Cloudflare is unavailable, the download test automatically falls back to Hetzner's public speed test servers (US East → Germany) without any user action required
+
+### v2.1.2
+- **1-second rolling average** — the live chart and stat card numbers display a rolling average of the last four 250 ms samples rather than raw instantaneous readings, removing per-chunk noise while keeping the display responsive
 
 ### v2.1.0
 - **Chart zoom** — right-click and drag horizontally on any traceroute latency chart to draw a selection box and zoom into that exact time range; a semi-transparent cyan highlight shows the selection as you drag

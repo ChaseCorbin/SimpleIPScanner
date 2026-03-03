@@ -105,7 +105,14 @@ namespace SimpleIPScanner.Models
         public string XAxisMidLabel       => $"{_testSeconds / 2}s";
         public string XAxisEndLabel       => $"{_testSeconds}s";
 
-        // Chart data — plain lists; PropertyChanged raised once per sample (no N² WPF loop)
+        // Number of raw 250 ms samples to average — 4 = 1-second smoothing window
+        private const int RollingWindow = 4;
+
+        // Raw instantaneous samples (not shown directly; used only to compute rolling average)
+        private readonly List<double> _rawDownload = new();
+        private readonly List<double> _rawUpload   = new();
+
+        // Chart data — stores rolling-average values; PropertyChanged raised once per sample
         public List<double> DownloadHistory { get; } = new();
         public List<double> UploadHistory   { get; } = new();
 
@@ -113,12 +120,15 @@ namespace SimpleIPScanner.Models
 
         public void AddDownloadSample(double mbps)
         {
-            DownloadHistory.Add(mbps);
-            DownloadMbps = mbps;
-            if (mbps > _peakDownload) PeakDownload = mbps;
+            _rawDownload.Add(mbps);
+            double avg = RollingAverage(_rawDownload);
 
-            // Auto-scale Y-axis: double ceiling whenever a sample exceeds 80%
-            while (mbps >= _maxChartMbps * 0.8)
+            DownloadHistory.Add(avg);
+            DownloadMbps = avg;
+            if (avg > _peakDownload) PeakDownload = avg;
+
+            // Auto-scale Y-axis: double ceiling whenever averaged value exceeds 80%
+            while (avg >= _maxChartMbps * 0.8)
                 MaxChartMbps = _maxChartMbps * 2;
 
             OnPropertyChanged(nameof(DownloadHistory));
@@ -126,14 +136,25 @@ namespace SimpleIPScanner.Models
 
         public void AddUploadSample(double mbps)
         {
-            UploadHistory.Add(mbps);
-            UploadMbps = mbps;
-            if (mbps > _peakUpload) PeakUpload = mbps;
+            _rawUpload.Add(mbps);
+            double avg = RollingAverage(_rawUpload);
 
-            while (mbps >= _maxChartMbps * 0.8)
+            UploadHistory.Add(avg);
+            UploadMbps = avg;
+            if (avg > _peakUpload) PeakUpload = avg;
+
+            while (avg >= _maxChartMbps * 0.8)
                 MaxChartMbps = _maxChartMbps * 2;
 
             OnPropertyChanged(nameof(UploadHistory));
+        }
+
+        private static double RollingAverage(List<double> raw)
+        {
+            int start = Math.Max(0, raw.Count - RollingWindow);
+            double sum = 0;
+            for (int i = start; i < raw.Count; i++) sum += raw[i];
+            return sum / (raw.Count - start);
         }
 
         public void Reset()
@@ -147,6 +168,8 @@ namespace SimpleIPScanner.Models
             MaxChartMbps   = 10;
             BestPingMs     = -1;
             IsRunning      = false;
+            _rawDownload.Clear();
+            _rawUpload.Clear();
             DownloadHistory.Clear();
             UploadHistory.Clear();
             PingServers.Clear();
