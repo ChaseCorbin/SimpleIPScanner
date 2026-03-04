@@ -128,17 +128,17 @@ This publishes a self-contained build, packages it with Velopack (`vpk pack`), a
 ### v2.1.2
 - **1-second rolling average** — the live chart and stat card numbers display a rolling average of the last four 250 ms samples rather than raw instantaneous readings, removing per-chunk noise while keeping the display responsive
 
-### v2.1.0
-- **Chart zoom** — right-click and drag horizontally on any traceroute latency chart to draw a selection box and zoom into that exact time range; a semi-transparent cyan highlight shows the selection as you drag
-- **Reset Zoom button** — an orange **⊟ Reset Zoom** button appears in the chart toolbar whenever a zoom is active; clicking it exits zoom mode and returns to the live 5-minute view
-- **Tooltip accuracy in zoom** — the mouse-over crosshair and timestamp/latency popup now correctly map to the zoomed time window rather than the full interval duration
-- **↩ Live compatibility** — the existing ↩ Live button also clears zoom state, so either control can be used to return to live tracking
-
 ### v2.1.1
 - **Internet Speed Test tab** — new tab that measures download speed, upload speed, and latency to five well-known servers; a live dual-line chart (cyan = download, orange = upload) updates every 250 ms alongside peak/average stat cards and a per-server ping breakdown
 - **Parallel TCP streams** — speed test opens 8 concurrent connections (matching Ookla's methodology) instead of a single stream; a single TCP connection is throttled by its congestion window ÷ RTT and severely under-reports fast connections — parallel streams saturate the link accurately
 - **Cloudflare endpoint fix** — resolved HTTP 403 errors caused by missing CORS headers; requests to `speed.cloudflare.com` now include the required `Origin` and `Referer` headers
 - **Download fallback chain** — if Cloudflare is unavailable, the download test automatically falls back to Hetzner's public speed test servers (US East → Germany) without any user action required
+
+### v2.1.0
+- **Chart zoom** — right-click and drag horizontally on any traceroute latency chart to draw a selection box and zoom into that exact time range; a semi-transparent cyan highlight shows the selection as you drag
+- **Reset Zoom button** — an orange **⊟ Reset Zoom** button appears in the chart toolbar whenever a zoom is active; clicking it exits zoom mode and returns to the live 5-minute view
+- **Tooltip accuracy in zoom** — the mouse-over crosshair and timestamp/latency popup now correctly map to the zoomed time window rather than the full interval duration
+- **↩ Live compatibility** — the existing ↩ Live button also clears zoom state, so either control can be used to return to live tracking
 
 ### v2.0.0
 - **Packet Capture & Analysis tab** — new dedicated tab for live network traffic capture powered by [SharpPcap](https://github.com/dotpcap/sharppcap) and [Npcap](https://npcap.com); requires Npcap to be installed (free, by the Nmap Project); an in-app banner with a direct download link is shown if Npcap is not detected
