@@ -667,14 +667,12 @@ namespace SimpleIPScanner
             var cts = new CancellationTokenSource();
             _traceCts[session] = cts;
 
-            // Loop 1: Latency monitoring (1 ping/sec — keeps 2-hour history at ~7,200 points)
+            // Loop 1: Latency monitoring (1 ping/sec; older data is auto-archived at 1-pt/min)
             _ = Task.Run(async () =>
             {
                 var pingSender = new System.Net.NetworkInformation.Ping();
                 while (!cts.Token.IsCancellationRequested)
                 {
-                    if (session.Elapsed.TotalHours >= 2) { Dispatcher.Invoke(() => StopTrace(session)); break; }
-
                     try
                     {
                         var reply = await pingSender.SendPingAsync(session.Destination, 1000);

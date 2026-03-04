@@ -9,7 +9,7 @@
 
 A modern, high-performance WPF application for network discovery, DNS performance testing, visual traceroute monitoring, live packet capture analysis, and internet speed testing.
 
-![Version](https://img.shields.io/badge/Version-2.1.2-10B981)
+![Version](https://img.shields.io/badge/Version-2.1.3-10B981)
 ![Platform](https://img.shields.io/badge/Platform-Windows-0078d4)
 ![Framework](https://img.shields.io/badge/Framework-.NET%208-512bd4)
 
@@ -55,6 +55,7 @@ Once installed, the app silently checks for new releases on startup. When an upd
 - **Live Hop-by-Hop Monitoring**: Continuous traceroute to one or more targets simultaneously.
 - **Multi-Chart View**: All monitored targets display their latency charts simultaneously on one scrollable page — no clicking through sessions.
 - **Performance Timeline**: Interactive latency chart with 1m / 5m / 10m / 1h / 2h zoom windows, mouse-over crosshair with timestamp/latency tooltip, click-drag panning through history, and **right-click drag to zoom** into any specific time range; a **Reset Zoom** button returns to the live 5-minute view.
+- **Unlimited Runtime with History Archive**: Traces run indefinitely with no time limit. The last 60 minutes of pings are kept at full 1-second resolution; older data is automatically compressed to 1 point per minute and retained in an archive — pan back hours or days into the past without any memory growth.
 - **Route Path Sidebar**: Click any session to reveal its hop-by-hop path in the sidebar; hop latencies are color-coded green / orange / red as they approach 200ms for at-a-glance health assessment.
 - **Timeout Log**: Timeouts are automatically logged to `traceroute_timeouts.log` in the app directory with timestamps, making it easy to review outages after a long monitoring run.
 - **Multi-Target**: Add any number of hosts and monitor them in parallel.
@@ -118,6 +119,10 @@ This publishes a self-contained build, packages it with Velopack (`vpk pack`), a
 - **Parallel TCP streams** — speed test opens 8 concurrent connections (matching Ookla's methodology) instead of a single stream; a single TCP connection is throttled by its congestion window ÷ RTT and severely under-reports fast connections — parallel streams saturate the link accurately
 - **Cloudflare endpoint fix** — resolved HTTP 403 errors caused by missing CORS headers; requests to `speed.cloudflare.com` now include the required `Origin` and `Referer` headers
 - **Download fallback chain** — if Cloudflare is unavailable, the download test automatically falls back to Hetzner's public speed test servers (US East → Germany) without any user action required
+
+### v2.1.3
+- **Unlimited traceroute runtime** — traces no longer stop after 2 hours; the session runs indefinitely without any restart required
+- **History archive with compression** — data older than 60 minutes is automatically compressed to 1 point per minute and moved to an archive rather than discarded; panning back hours or days into the past works seamlessly, and memory stays flat (~240 KB for a full 24-hour session)
 
 ### v2.1.2
 - **1-second rolling average** — the live chart and stat card numbers display a rolling average of the last four 250 ms samples rather than raw instantaneous readings, removing per-chunk noise while keeping the display responsive

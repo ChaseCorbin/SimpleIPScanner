@@ -77,11 +77,17 @@ namespace SimpleIPScanner.Models
 
         public ObservableCollection<TraceHop> Hops { get; } = new();
 
-        // Hard cap: 7,200 points = 2 hours at 1 ping/sec.
-        private const int MaxHistoryPoints = 7_200;
+        // Recent history at full 1-second resolution (60 minutes).
+        private const int RecentWindowPoints = 3_600;
+        // Points per archive bucket: 60 seconds compressed into 1 point (1-pt/min archive).
+        private const int ArchiveBlockSize = 60;
 
-        // History of latencies for the final hop. Stores up to 2 hours of data.
+        // Full-resolution recent data (last 60 minutes, 1-pt/sec).
         public List<TraceDataPoint> LatencyHistory { get; } = new();
+
+        // Compressed archive: points older than 60 minutes, stored at 1-pt/min.
+        // Allows panning arbitrarily far back without runaway memory growth.
+        public List<TraceDataPoint> ArchivedHistory { get; } = new();
 
         private int _chartIntervalMinutes = 1;
         public int ChartIntervalMinutes
@@ -121,10 +127,11 @@ namespace SimpleIPScanner.Models
             var start = ViewStart;
             var end = ViewEnd;
 
-            // Atomic swap — no per-item CollectionChanged events; one PropertyChanged at the end.
-            _filteredHistory = LatencyHistory
-                .Where(p => p.Timestamp >= start && p.Timestamp <= end)
-                .ToList();
+            // Merge archived (1-pt/min, always older) with recent (full-res) for the view window.
+            // Archived timestamps always predate LatencyHistory timestamps, so concat is ordered.
+            var archived = ArchivedHistory.Where(p => p.Timestamp >= start && p.Timestamp <= end);
+            var recent   = LatencyHistory .Where(p => p.Timestamp >= start && p.Timestamp <= end);
+            _filteredHistory = archived.Concat(recent).ToList();
 
             OnPropertyChanged(nameof(FilteredHistory));
             OnPropertyChanged(nameof(FilteredHistoryCount));
@@ -154,10 +161,12 @@ namespace SimpleIPScanner.Models
                 return;
             }
 
-            // Clamp: can't pan past available history
-            if (LatencyHistory.Any())
+            // Clamp: can't pan past available history (including archive)
+            DateTime? oldestPoint = ArchivedHistory.Any()  ? ArchivedHistory[0].Timestamp :
+                                    LatencyHistory.Any()   ? LatencyHistory[0].Timestamp  : (DateTime?)null;
+            if (oldestPoint.HasValue)
             {
-                DateTime oldestAllowed = LatencyHistory[0].Timestamp.AddMinutes(ChartIntervalMinutes);
+                DateTime oldestAllowed = oldestPoint.Value.AddMinutes(ChartIntervalMinutes);
                 if (viewEnd < oldestAllowed) viewEnd = oldestAllowed;
             }
 
@@ -210,21 +219,19 @@ namespace SimpleIPScanner.Models
         {
             LatencyHistory.Add(new TraceDataPoint { Timestamp = DateTime.Now, Latency = latency >= 0 ? (double)latency : -1.0 });
 
-            // Trim time-expired entries from the front (data is chronological so scan from index 0).
-            // RemoveRange is used once the cutoff is found, avoiding a full-list predicate scan.
-            if (LatencyHistory.Count > 0 && LatencyHistory[0].Timestamp < DateTime.Now.AddHours(-2))
+            // Once the high-res buffer is full, compress the oldest 60 seconds into a single
+            // archive point (1-pt/min) rather than discarding them. This lets the trace run
+            // indefinitely while keeping memory flat: ~3,600 recent + ~1 per archived minute.
+            while (LatencyHistory.Count > RecentWindowPoints)
             {
-                int staleCount = 0;
-                var twoHrAgo = DateTime.Now.AddHours(-2);
-                while (staleCount < LatencyHistory.Count && LatencyHistory[staleCount].Timestamp < twoHrAgo)
-                    staleCount++;
-                if (staleCount > 0)
-                    LatencyHistory.RemoveRange(0, staleCount);
-            }
+                var block = LatencyHistory.GetRange(0, ArchiveBlockSize);
+                var midTime = block[ArchiveBlockSize / 2].Timestamp;
+                var valid = block.Where(p => p.Latency >= 0).Select(p => p.Latency).ToList();
+                double compressedLatency = valid.Count > 0 ? valid.Average() : -1.0;
 
-            // Hard cap: belt-and-suspenders guard against unexpected fast accumulation.
-            if (LatencyHistory.Count > MaxHistoryPoints)
-                LatencyHistory.RemoveRange(0, LatencyHistory.Count - MaxHistoryPoints);
+                ArchivedHistory.Add(new TraceDataPoint { Timestamp = midTime, Latency = compressedLatency });
+                LatencyHistory.RemoveRange(0, ArchiveBlockSize);
+            }
 
             UpdateFilteredHistory();
         }
