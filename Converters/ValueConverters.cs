@@ -178,6 +178,45 @@ namespace SimpleIPScanner.Converters
     }
 
     /// <summary>
+    /// Converts a list of event <see cref="TraceDataPoint"/>s (timeouts or latency spikes) to a
+    /// <see cref="PathGeometry"/> consisting of one vertical line per event, positioned by timestamp.
+    /// Inputs: events (IReadOnlyList&lt;TraceDataPoint&gt;), width, height, viewStart (DateTime), viewEnd (DateTime).
+    /// </summary>
+    public class EventMarkersConverter : IMultiValueConverter
+    {
+        public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (values.Length < 5
+                || values[0] is not IReadOnlyList<TraceDataPoint> events
+                || values[1] is not double width
+                || values[2] is not double height
+                || values[3] is not DateTime viewStart
+                || values[4] is not DateTime viewEnd)
+                return Geometry.Empty;
+
+            double windowSeconds = (viewEnd - viewStart).TotalSeconds;
+            if (windowSeconds <= 0 || events.Count == 0 || width <= 0 || height <= 0)
+                return Geometry.Empty;
+
+            var geometry = new PathGeometry();
+            foreach (var evt in events)
+            {
+                double x = (evt.Timestamp - viewStart).TotalSeconds / windowSeconds * width;
+                if (x < 0 || x > width) continue;
+
+                var figure = new PathFigure { StartPoint = new Point(x, 0), IsClosed = false };
+                figure.Segments.Add(new LineSegment(new Point(x, height), isStroked: true));
+                geometry.Figures.Add(figure);
+            }
+
+            return geometry;
+        }
+
+        public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
+            => throw new NotSupportedException();
+    }
+
+    /// <summary>
     /// Converts a single hop latency (long ms) to a color brush.
     /// &lt; 0      → gray  (timeout / no response)
     /// 0–99    → green

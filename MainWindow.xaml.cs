@@ -614,15 +614,33 @@ namespace SimpleIPScanner
 
         private void TraceTarget_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
+            var sidebarGrid = SidebarHopSection.Parent as Grid;
             if (TraceTargetsList.SelectedItem is TraceSession session)
             {
-                SidebarHopSection.DataContext  = session;
-                SidebarHopSection.Visibility   = Visibility.Visible;
+                SidebarHopSection.DataContext = session;
+                SidebarHopSection.Visibility  = Visibility.Visible;
+                if (sidebarGrid != null)
+                {
+                    // Splitter row (Row 2): 5px drag handle
+                    sidebarGrid.RowDefinitions[2].Height = new GridLength(5);
+                    // Route path row (Row 3): takes proportional space (min 120px)
+                    sidebarGrid.RowDefinitions[3].Height = new GridLength(1, GridUnitType.Star);
+                    sidebarGrid.RowDefinitions[3].MinHeight = 120;
+                    // Target list row (Row 1): also *, gets 2x more space by default
+                    sidebarGrid.RowDefinitions[1].Height = new GridLength(2, GridUnitType.Star);
+                }
             }
             else
             {
-                SidebarHopSection.DataContext  = null;
-                SidebarHopSection.Visibility   = Visibility.Collapsed;
+                SidebarHopSection.DataContext = null;
+                SidebarHopSection.Visibility  = Visibility.Collapsed;
+                if (sidebarGrid != null)
+                {
+                    sidebarGrid.RowDefinitions[2].Height = new GridLength(0);
+                    sidebarGrid.RowDefinitions[3].Height = new GridLength(0);
+                    sidebarGrid.RowDefinitions[3].MinHeight = 0;
+                    sidebarGrid.RowDefinitions[1].Height = new GridLength(1, GridUnitType.Star);
+                }
             }
         }
 
@@ -876,38 +894,65 @@ namespace SimpleIPScanner
                 return;
             }
 
-            if (!session.FilteredHistory.Any()) return;
+            bool hasHistory = session.FilteredHistory.Any();
+            bool hasEvents  = session.FilteredTimeoutEvents.Any() || session.FilteredSpikeEvents.Any();
+            if (!hasHistory && !hasEvents) return;
 
             // Use the actual visible window duration (respects zoom mode)
-            double totalSec    = (session.ViewEnd - session.ViewStart).TotalSeconds;
+            double totalSec = (session.ViewEnd - session.ViewStart).TotalSeconds;
             if (totalSec <= 0) return;
 
-            // Map mouse X → nearest data point
-            double xRatio       = mousePos.X / chart.ActualWidth;
-            DateTime mouseTime  = session.ViewStart + TimeSpan.FromSeconds(xRatio * totalSec);
+            double xRatio      = mousePos.X / chart.ActualWidth;
+            DateTime mouseTime = session.ViewStart + TimeSpan.FromSeconds(xRatio * totalSec);
 
-            var nearest = session.FilteredHistory
-                .OrderBy(p => Math.Abs((p.Timestamp - mouseTime).TotalSeconds))
-                .First();
+            // Snap to event marker lines (timeout = red, spike = orange) within 12 px.
+            // Event lines are exact-timestamp and more useful than an averaged archive point.
+            const double snapPixels = 12.0;
+            Models.TraceDataPoint? snappedEvent = null;
+            double snappedDist = double.MaxValue;
+            foreach (var evt in session.FilteredTimeoutEvents.Concat(session.FilteredSpikeEvents))
+            {
+                double evtX = (evt.Timestamp - session.ViewStart).TotalSeconds / totalSec * chart.ActualWidth;
+                double dist = Math.Abs(evtX - mousePos.X);
+                if (dist < snapPixels && dist < snappedDist)
+                {
+                    snappedEvent = evt;
+                    snappedDist  = dist;
+                }
+            }
 
-            double xPos = (nearest.Timestamp - session.ViewStart).TotalSeconds / totalSec * chart.ActualWidth;
+            // Resolve the display point: event snap wins; fall back to nearest history point.
+            Models.TraceDataPoint displayPoint;
+            if (snappedEvent != null)
+            {
+                displayPoint = snappedEvent;
+            }
+            else if (hasHistory)
+            {
+                displayPoint = session.FilteredHistory
+                    .OrderBy(p => Math.Abs((p.Timestamp - mouseTime).TotalSeconds))
+                    .First();
+            }
+            else return;
+
+            double xPos = (displayPoint.Timestamp - session.ViewStart).TotalSeconds / totalSec * chart.ActualWidth;
             xPos = Math.Clamp(xPos, 0, chart.ActualWidth);
 
             tooltipLine.X1 = tooltipLine.X2 = xPos;
             tooltipLine.Visibility  = Visibility.Visible;
             tooltipPopup.Visibility = Visibility.Visible;
 
-            if (tooltipTime != null)    tooltipTime.Text = nearest.Timestamp.ToString("HH:mm:ss");
+            if (tooltipTime != null)    tooltipTime.Text = displayPoint.Timestamp.ToString("HH:mm:ss");
             if (tooltipLatency != null)
             {
-                tooltipLatency.Text = nearest.Latency < 0 ? "Timeout" : $"{nearest.Latency:F0} ms";
-                _tooltipRedBrush    ??= FindResource("ErrorRedBrush")     as Brush;
+                tooltipLatency.Text = displayPoint.Latency < 0 ? "Timeout" : $"{displayPoint.Latency:F0} ms";
+                _tooltipRedBrush    ??= FindResource("ErrorRedBrush")      as Brush;
                 _tooltipOrangeBrush ??= FindResource("WarningOrangeBrush") as Brush;
-                _tooltipGreenBrush  ??= FindResource("OnlineGreenBrush")  as Brush;
+                _tooltipGreenBrush  ??= FindResource("OnlineGreenBrush")   as Brush;
                 tooltipLatency.Foreground =
-                    nearest.Latency < 0 || nearest.Latency >= 200 ? _tooltipRedBrush :
-                    nearest.Latency >= 100                         ? _tooltipOrangeBrush :
-                                                                     _tooltipGreenBrush;
+                    displayPoint.Latency < 0 || displayPoint.Latency >= 200 ? _tooltipRedBrush :
+                    displayPoint.Latency >= 100                              ? _tooltipOrangeBrush :
+                                                                               _tooltipGreenBrush;
             }
 
             Canvas.SetLeft(tooltipPopup, xPos + 10);

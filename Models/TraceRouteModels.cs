@@ -77,17 +77,37 @@ namespace SimpleIPScanner.Models
 
         public ObservableCollection<TraceHop> Hops { get; } = new();
 
-        // Recent history at full 1-second resolution (60 minutes).
+        // Three-tier storage constants.
+        // Tier 1: Full 1-sec resolution for the last 60 minutes (3,600 points).
         private const int RecentWindowPoints = 3_600;
-        // Points per archive bucket: 60 seconds compressed into 1 point (1-pt/min archive).
-        private const int ArchiveBlockSize = 60;
+        // Block size compressed from Tier 1 → Tier 2 (60 pts = 60 seconds).
+        private const int ArchiveBlockSize   = 60;
+        // Tier 2: Medium 10-pt/min for the hour before Tier 1 (600 points = 60 min × 10/min).
+        private const int MediumWindowPoints = 600;
+        // Block size compressed from Tier 2 → Tier 3 (10 medium pts = 1 minute of medium-res).
+        private const int DeepBlockSize      = 10;
 
-        // Full-resolution recent data (last 60 minutes, 1-pt/sec).
+        // Tier 1: Full-resolution recent data (last 60 minutes, 1-pt/sec).
         public List<TraceDataPoint> LatencyHistory { get; } = new();
 
-        // Compressed archive: points older than 60 minutes, stored at 1-pt/min.
-        // Allows panning arbitrarily far back without runaway memory growth.
+        // Tier 2: Medium-resolution archive (1–2 hours ago, 1-pt/6-sec = 10-pt/min).
+        public List<TraceDataPoint> MediumHistory { get; } = new();
+
+        // Tier 3: Deep archive (2+ hours ago, 1-pt/min).
         public List<TraceDataPoint> ArchivedHistory { get; } = new();
+
+        // Exact-timestamp events preserved during compression (timeouts + pings > 100 ms).
+        // These are NOT averaged — they retain their original second-precision timestamp
+        // so that event moments remain visible when viewing hours-old archived data.
+        public List<TraceDataPoint> EventHistory { get; } = new();
+
+        // Pre-filtered event sublists for the current view window (updated in UpdateFilteredHistory).
+        // Exposed separately so the chart can render two coloured overlay Path elements without
+        // mixing events into the main latency polyline.
+        private List<TraceDataPoint> _filteredTimeoutEvents = new();
+        private List<TraceDataPoint> _filteredSpikeEvents   = new();
+        public IReadOnlyList<TraceDataPoint> FilteredTimeoutEvents => _filteredTimeoutEvents;
+        public IReadOnlyList<TraceDataPoint> FilteredSpikeEvents   => _filteredSpikeEvents;
 
         private int _chartIntervalMinutes = 1;
         public int ChartIntervalMinutes
@@ -114,10 +134,11 @@ namespace SimpleIPScanner.Models
 
         private double CalculatePacketLoss()
         {
-            var history = FilteredHistory;
-            if (!history.Any()) return 0;
-            int timeouts = history.Count(p => p.Latency < 0);
-            return (double)timeouts / history.Count * 100;
+            // Count recent timeouts (still in FilteredHistory) plus archived timeout events.
+            // Spike events count as successful pings in the denominator.
+            int timeouts = FilteredHistory.Count(p => p.Latency < 0) + _filteredTimeoutEvents.Count;
+            int total    = FilteredHistory.Count + _filteredTimeoutEvents.Count + _filteredSpikeEvents.Count;
+            return total == 0 ? 0 : (double)timeouts / total * 100;
         }
 
         private void UpdateFilteredHistory()
@@ -127,14 +148,22 @@ namespace SimpleIPScanner.Models
             var start = ViewStart;
             var end = ViewEnd;
 
-            // Merge archived (1-pt/min, always older) with recent (full-res) for the view window.
-            // Archived timestamps always predate LatencyHistory timestamps, so concat is ordered.
-            var archived = ArchivedHistory.Where(p => p.Timestamp >= start && p.Timestamp <= end);
-            var recent   = LatencyHistory .Where(p => p.Timestamp >= start && p.Timestamp <= end);
-            _filteredHistory = archived.Concat(recent).ToList();
+            // Main polyline: deep archive (1-pt/min) + medium archive (10-pt/min) + recent full-res.
+            // Events are intentionally excluded — they render as separate overlay Path elements.
+            var deep   = ArchivedHistory.Where(p => p.Timestamp >= start && p.Timestamp <= end);
+            var medium = MediumHistory  .Where(p => p.Timestamp >= start && p.Timestamp <= end);
+            var recent = LatencyHistory .Where(p => p.Timestamp >= start && p.Timestamp <= end);
+            _filteredHistory = deep.Concat(medium).Concat(recent).ToList();
+
+            // Event marker lists for the two coloured overlay paths.
+            var windowEvents = EventHistory.Where(p => p.Timestamp >= start && p.Timestamp <= end);
+            _filteredTimeoutEvents = windowEvents.Where(p => p.Latency < 0) .ToList();
+            _filteredSpikeEvents   = windowEvents.Where(p => p.Latency >= 0).ToList();
 
             OnPropertyChanged(nameof(FilteredHistory));
             OnPropertyChanged(nameof(FilteredHistoryCount));
+            OnPropertyChanged(nameof(FilteredTimeoutEvents));
+            OnPropertyChanged(nameof(FilteredSpikeEvents));
             OnPropertyChanged(nameof(MaxLatencyValue));
             OnPropertyChanged(nameof(AverageLatency));
             OnPropertyChanged(nameof(PacketLoss));
@@ -161,9 +190,15 @@ namespace SimpleIPScanner.Models
                 return;
             }
 
-            // Clamp: can't pan past available history (including archive)
-            DateTime? oldestPoint = ArchivedHistory.Any()  ? ArchivedHistory[0].Timestamp :
-                                    LatencyHistory.Any()   ? LatencyHistory[0].Timestamp  : (DateTime?)null;
+            // Clamp: can't pan past available history (all tiers + events + recent)
+            DateTime? oldestPoint = null;
+            if (ArchivedHistory.Any()) oldestPoint = ArchivedHistory[0].Timestamp;
+            if (MediumHistory.Any() && (oldestPoint == null || MediumHistory[0].Timestamp < oldestPoint.Value))
+                oldestPoint = MediumHistory[0].Timestamp;
+            if (EventHistory.Any() && (oldestPoint == null || EventHistory[0].Timestamp < oldestPoint.Value))
+                oldestPoint = EventHistory[0].Timestamp;
+            if (!oldestPoint.HasValue && LatencyHistory.Any())
+                oldestPoint = LatencyHistory[0].Timestamp;
             if (oldestPoint.HasValue)
             {
                 DateTime oldestAllowed = oldestPoint.Value.AddMinutes(ChartIntervalMinutes);
@@ -219,18 +254,68 @@ namespace SimpleIPScanner.Models
         {
             LatencyHistory.Add(new TraceDataPoint { Timestamp = DateTime.Now, Latency = latency >= 0 ? (double)latency : -1.0 });
 
-            // Once the high-res buffer is full, compress the oldest 60 seconds into a single
-            // archive point (1-pt/min) rather than discarding them. This lets the trace run
-            // indefinitely while keeping memory flat: ~3,600 recent + ~1 per archived minute.
+            // Tier 1 → Tier 2: compress oldest 60-second block into 10 medium-res points (1-pt/6-sec).
+            // Timeouts and spikes ≥ 100 ms are preserved in EventHistory at exact timestamps.
             while (LatencyHistory.Count > RecentWindowPoints)
             {
                 var block = LatencyHistory.GetRange(0, ArchiveBlockSize);
-                var midTime = block[ArchiveBlockSize / 2].Timestamp;
-                var valid = block.Where(p => p.Latency >= 0).Select(p => p.Latency).ToList();
-                double compressedLatency = valid.Count > 0 ? valid.Average() : -1.0;
+                var successful = block.Where(p => p.Latency >= 0).Select(p => p.Latency).ToList();
+                const double spikeThreshold = 100.0;
 
-                ArchivedHistory.Add(new TraceDataPoint { Timestamp = midTime, Latency = compressedLatency });
+                if (successful.Count == 0)
+                {
+                    // All timeouts — one representative timeout event for the whole minute.
+                    EventHistory.Add(new TraceDataPoint
+                    {
+                        Timestamp = block[ArchiveBlockSize / 2].Timestamp,
+                        Latency   = -1
+                    });
+                }
+                else
+                {
+                    // Preserve individual timeouts and spikes at their exact timestamps.
+                    foreach (var p in block)
+                    {
+                        if (p.Latency < 0 || p.Latency >= spikeThreshold)
+                            EventHistory.Add(p);
+                    }
+
+                    // Compress normal pings into 10 medium-res sub-blocks of 6 seconds each.
+                    const int subBlockSize = ArchiveBlockSize / DeepBlockSize; // 6
+                    for (int i = 0; i < ArchiveBlockSize; i += subBlockSize)
+                    {
+                        var sub = block.GetRange(i, Math.Min(subBlockSize, block.Count - i));
+                        var normalPings = sub
+                            .Where(p => p.Latency >= 0 && p.Latency < spikeThreshold)
+                            .Select(p => p.Latency).ToList();
+                        if (normalPings.Count > 0)
+                        {
+                            MediumHistory.Add(new TraceDataPoint
+                            {
+                                Timestamp = sub[sub.Count / 2].Timestamp,
+                                Latency   = normalPings.Average()
+                            });
+                        }
+                    }
+                }
+
                 LatencyHistory.RemoveRange(0, ArchiveBlockSize);
+            }
+
+            // Tier 2 → Tier 3: compress 1 hour of medium-res into 1-pt/min deep archive.
+            while (MediumHistory.Count > MediumWindowPoints)
+            {
+                var block = MediumHistory.GetRange(0, DeepBlockSize);
+                var normalPings = block.Where(p => p.Latency >= 0).Select(p => p.Latency).ToList();
+                if (normalPings.Count > 0)
+                {
+                    ArchivedHistory.Add(new TraceDataPoint
+                    {
+                        Timestamp = block[DeepBlockSize / 2].Timestamp,
+                        Latency   = normalPings.Average()
+                    });
+                }
+                MediumHistory.RemoveRange(0, DeepBlockSize);
             }
 
             UpdateFilteredHistory();

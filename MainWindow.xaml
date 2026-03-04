@@ -785,8 +785,9 @@
                         <Grid>
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="*"/>
-                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*" MinHeight="60"/>
+                                <RowDefinition Height="0"/>
+                                <RowDefinition Height="0"/>
                                 <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
 
@@ -850,12 +851,23 @@
                                 </ListBox.ItemTemplate>
                             </ListBox>
 
+                            <!-- Drag handle between target list and Route Path -->
+                            <GridSplitter x:Name="SidebarSplitter" Grid.Row="2"
+                                          HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                                          ResizeDirection="Rows" ResizeBehavior="PreviousAndNext"
+                                          Background="{StaticResource BorderDarkBrush}" Cursor="SizeNS"
+                                          Height="5"/>
+
                             <!-- Route Path hop panel — shown when a session is selected -->
-                            <Border x:Name="SidebarHopSection" Grid.Row="2" Visibility="Collapsed"
-                                    BorderBrush="{StaticResource BorderDarkBrush}" BorderThickness="0,1,0,0"
+                            <Border x:Name="SidebarHopSection" Grid.Row="3"
+                                    BorderBrush="{StaticResource BorderDarkBrush}" BorderThickness="0,0,0,0"
                                     Background="{StaticResource SecondaryDarkBrush}">
-                                <StackPanel>
-                                    <Grid Margin="12,10,12,6">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*"/>
+                                    </Grid.RowDefinitions>
+                                    <Grid Grid.Row="0" Margin="12,10,12,6">
                                         <TextBlock Text="Route Path" FontSize="11" FontWeight="SemiBold"
                                                    Foreground="{StaticResource TextSecondaryBrush}"
                                                    VerticalAlignment="Center"/>
@@ -863,7 +875,7 @@
                                                    Foreground="{StaticResource AccentCyanBrush}"
                                                    HorizontalAlignment="Right" VerticalAlignment="Center"/>
                                     </Grid>
-                                    <ScrollViewer MaxHeight="180" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                                         <ItemsControl ItemsSource="{Binding Hops}" Margin="8,0,8,8">
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate>
@@ -902,10 +914,10 @@
                                             </ItemsControl.ItemTemplate>
                                         </ItemsControl>
                                     </ScrollViewer>
-                                </StackPanel>
+                                </Grid>
                             </Border>
 
-                            <Border Grid.Row="3" Padding="16" Background="{StaticResource CardDarkBrush}">
+                            <Border Grid.Row="4" Padding="16" Background="{StaticResource CardDarkBrush}">
                                 <Button Content="▶ Start All" Style="{StaticResource ScanButton}" Click="StartAllTraces_Click"/>
                             </Border>
                         </Grid>
@@ -1146,6 +1158,33 @@
                                                                     </MultiBinding>
                                                                 </Polyline.Points>
                                                             </Polyline>
+                                                            <!-- Event marker overlays: vertical 1-px lines at exact event timestamps.    -->
+                                                            <!-- Red  = timeout (latency < 0).  Orange = spike (latency ≥ 100 ms).        -->
+                                                            <!-- Only appear for archived data; recent pings are already on the polyline. -->
+                                                            <Path StrokeThickness="1" Opacity="0.65" IsHitTestVisible="False"
+                                                                  Stroke="{StaticResource ErrorRedBrush}">
+                                                                <Path.Data>
+                                                                    <MultiBinding Converter="{StaticResource EventMarkersConverter}">
+                                                                        <Binding Path="FilteredTimeoutEvents"/>
+                                                                        <Binding Path="ActualWidth" ElementName="ChartContainer"/>
+                                                                        <Binding Path="ActualHeight" ElementName="ChartContainer"/>
+                                                                        <Binding Path="ViewStart"/>
+                                                                        <Binding Path="ViewEnd"/>
+                                                                    </MultiBinding>
+                                                                </Path.Data>
+                                                            </Path>
+                                                            <Path StrokeThickness="1" Opacity="0.45" IsHitTestVisible="False"
+                                                                  Stroke="{StaticResource WarningOrangeBrush}">
+                                                                <Path.Data>
+                                                                    <MultiBinding Converter="{StaticResource EventMarkersConverter}">
+                                                                        <Binding Path="FilteredSpikeEvents"/>
+                                                                        <Binding Path="ActualWidth" ElementName="ChartContainer"/>
+                                                                        <Binding Path="ActualHeight" ElementName="ChartContainer"/>
+                                                                        <Binding Path="ViewStart"/>
+                                                                        <Binding Path="ViewEnd"/>
+                                                                    </MultiBinding>
+                                                                </Path.Data>
+                                                            </Path>
                                                             <!-- Hover tooltip -->
                                                             <Canvas IsHitTestVisible="False">
                                                                 <Line x:Name="ChartTooltipLine"

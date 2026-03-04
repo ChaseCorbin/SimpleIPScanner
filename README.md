@@ -9,7 +9,7 @@
 
 A modern, high-performance WPF application for network discovery, DNS performance testing, visual traceroute monitoring, live packet capture analysis, and internet speed testing.
 
-![Version](https://img.shields.io/badge/Version-2.1.3-10B981)
+![Version](https://img.shields.io/badge/Version-2.1.4-10B981)
 ![Platform](https://img.shields.io/badge/Platform-Windows-0078d4)
 ![Framework](https://img.shields.io/badge/Framework-.NET%208-512bd4)
 
@@ -55,7 +55,8 @@ Once installed, the app silently checks for new releases on startup. When an upd
 - **Live Hop-by-Hop Monitoring**: Continuous traceroute to one or more targets simultaneously.
 - **Multi-Chart View**: All monitored targets display their latency charts simultaneously on one scrollable page — no clicking through sessions.
 - **Performance Timeline**: Interactive latency chart with 1m / 5m / 10m / 1h / 2h zoom windows, mouse-over crosshair with timestamp/latency tooltip, click-drag panning through history, and **right-click drag to zoom** into any specific time range; a **Reset Zoom** button returns to the live 5-minute view.
-- **Unlimited Runtime with History Archive**: Traces run indefinitely with no time limit. The last 60 minutes of pings are kept at full 1-second resolution; older data is automatically compressed to 1 point per minute and retained in an archive — pan back hours or days into the past without any memory growth.
+- **Unlimited Runtime with History Archive**: Traces run indefinitely with no time limit. Data is stored in three tiers: the last 60 minutes at full 1-second resolution, the prior hour at 10 points per minute, and anything older at 1 point per minute — pan back hours or days without any memory growth.
+- **Event Marker Overlays**: Timeouts and latency spikes ≥ 100 ms are preserved at their exact timestamps as colored vertical lines overlaid on the chart (red = timeout, orange = spike), keeping every notable event visible even in long archive views. Hovering near a marker snaps the tooltip to show its exact value.
 - **Route Path Sidebar**: Click any session to reveal its hop-by-hop path in the sidebar; hop latencies are color-coded green / orange / red as they approach 200ms for at-a-glance health assessment.
 - **Timeout Log**: Timeouts are automatically logged to `traceroute_timeouts.log` in the app directory with timestamps, making it easy to review outages after a long monitoring run.
 - **Multi-Target**: Add any number of hosts and monitor them in parallel.
@@ -119,6 +120,12 @@ This publishes a self-contained build, packages it with Velopack (`vpk pack`), a
 - **Parallel TCP streams** — speed test opens 8 concurrent connections (matching Ookla's methodology) instead of a single stream; a single TCP connection is throttled by its congestion window ÷ RTT and severely under-reports fast connections — parallel streams saturate the link accurately
 - **Cloudflare endpoint fix** — resolved HTTP 403 errors caused by missing CORS headers; requests to `speed.cloudflare.com` now include the required `Origin` and `Referer` headers
 - **Download fallback chain** — if Cloudflare is unavailable, the download test automatically falls back to Hetzner's public speed test servers (US East → Germany) without any user action required
+
+### v2.1.4
+- **Three-tier history compression** — traceroute data is now stored at three resolutions: the last 60 minutes at full 1-second precision, the prior hour at 10 points per minute (one point every 6 seconds), and anything older at 1 point per minute; panning back 2+ hours shows a smooth baseline without sacrificing mid-range detail
+- **Event marker overlays** — timeouts and latency spikes ≥ 100 ms are now preserved at their exact second-precision timestamps as vertical lines overlaid on the chart: red for timeouts, orange for spikes; the main polyline stays clean while every event remains individually visible no matter how far back you pan
+- **Snap-to event markers on hover** — when the mouse is within 12 pixels of a timeout or spike marker line, the crosshair tooltip snaps to that exact event and shows its precise timestamp and latency (or "Timeout"); this makes it easy to inspect individual high-ping or drop events without hunting pixel-by-pixel
+- **Resizable Route Path sidebar** — the Route Path hop panel now grows with the window and can be resized by dragging the divider between the session list and the hop panel; the hop list fills all available height with a scrollbar rather than being capped at a fixed size
 
 ### v2.1.3
 - **Unlimited traceroute runtime** — traces no longer stop after 2 hours; the session runs indefinitely without any restart required
