@@ -50,7 +50,7 @@ namespace SimpleIPScanner
         private readonly UpdateService _updateService = new();
         private readonly AppSettings _settings = AppSettings.Load();
 
-        // Timeout log file — written to the app directory for long-running trace sessions
+        // High-latency log file — written to the app directory for long-running trace sessions
         private static readonly string _timeoutLogPath =
             System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "traceroute_timeouts.log");
         private static readonly object _logLock = new();
@@ -662,11 +662,12 @@ namespace SimpleIPScanner
             await Task.WhenAll(tasks);
         }
 
-        private static void LogTimeout(string destination)
+        private static void LogHighLatency(string destination, long rtt)
         {
             try
             {
-                string line = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] TIMEOUT: {destination}{Environment.NewLine}";
+                string label = rtt < 0 ? "TIMEOUT" : $"{rtt}ms";
+                string line = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] HIGH LATENCY ({label}): {destination}{Environment.NewLine}";
                 lock (_logLock)
                     System.IO.File.AppendAllText(_timeoutLogPath, line);
             }
@@ -695,12 +696,13 @@ namespace SimpleIPScanner
                     {
                         var reply = await pingSender.SendPingAsync(session.Destination, 1000);
                         bool timeout = reply.Status != System.Net.NetworkInformation.IPStatus.Success;
-                        if (timeout) LogTimeout(session.Destination);
-                        Dispatcher.Invoke(() => session.AddDataPoint(timeout ? -1 : reply.RoundtripTime));
+                        long rtt = timeout ? -1 : reply.RoundtripTime;
+                        if (timeout || rtt > 100) LogHighLatency(session.Destination, rtt);
+                        Dispatcher.Invoke(() => session.AddDataPoint(rtt));
                     }
                     catch
                     {
-                        LogTimeout(session.Destination);
+                        LogHighLatency(session.Destination, -1);
                         Dispatcher.Invoke(() => session.AddDataPoint(-1));
                     }
 
